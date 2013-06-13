@@ -256,7 +256,9 @@ class Object #if server extends sys.db.Object #end
 				}
 			}
 			else
-				s.serialize(Reflect.field(this, f));
+			{
+				s.serialize(Reflect.getProperty(this, f));
+			}
 		}
 	}
 
@@ -289,7 +291,9 @@ class Object #if server extends sys.db.Object #end
 				}
 			}
 			else 
+			{
 				Reflect.setProperty(this, f, s.unserialize());
+			}
 		}
 	}
 }
