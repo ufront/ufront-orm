@@ -7,7 +7,7 @@
   "contributors": ["fponticelli","jason"],
   "releasenote": "Initial Release. For early adopters only at this point, things subject to change.",
   "version": "1.0.0-alpha.1",
-  "url": "https://github.com/ufront/ufront-uftool",
+  "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": ""
   }
