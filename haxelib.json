@@ -5,8 +5,8 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, permission checking and client-side safety.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Initial Release",
-  "version": "1.0.0-beta.1",
+  "releasenote": "Initial Release. For early adopters only at this point, things subject to change.",
+  "version": "1.0.0-alpha.1",
   "url": "https://github.com/ufront/ufront-uftool",
   "dependencies": {
     "tink_core": ""
