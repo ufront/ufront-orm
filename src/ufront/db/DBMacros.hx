@@ -481,7 +481,7 @@ class DBMacros
 			// Add the private container field
 			// generally _fieldName:T
 			var modelTypeSig:ComplexType = TPath(modelType);
-			var iterableTypeSig:ComplexType = macro :Iterable<$modelTypeSig>;
+			var iterableTypeSig:ComplexType = macro :List<$modelTypeSig>;
 			fields.push({
 				pos: f.pos,
 				name: "_" + f.name,
@@ -525,7 +525,7 @@ class DBMacros
 					#if ufront_clientds
 						if ($ident == null)
 							// Should resolve synchronously if it's already in the cache...
-							$model.clientDS.search($criteriaObj).then(function (res) $ident = res);
+							$model.clientDS.search($criteriaObj).then(function (res) $ident = Lambda.list(res));
 					#end
 					return $ident;
 				}

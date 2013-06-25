@@ -306,14 +306,34 @@ typedef BelongsTo<T> = T;
 
 /** HasMany relation 
 
-This type is transformed into a property that lets you iterate over related objects.  Related objects are determined by a corresponding "BelongsTo<T>" in the related class.  The returned list is read only - to update it you must update the related property on each object.
+This type is transformed into an Iterable that lets you iterate over related objects.  Related objects are determined by a corresponding "BelongsTo<T>" in the related class.  
 
-T must be a type that extends ufront.db.Object */
-typedef HasMany<T> = Iterable<T>;
+While the real data type here is a `List<T>`, we expose it as a `ReadOnlyList<T>` so that you are not tempted to push new objects to the list or remove objects from the list.  To update it you must update the related property on each related object.
+
+T must be a type that extends `ufront.db.Object` */
+typedef HasMany<T> = ReadOnlyList<T>
 
 /** HasOne relation 
 
 This type is transformed into a property that lets you fetch a single related object.  Related objects are determined by a corresponding "BelongsTo<T>" in the related class.  The property is read only - to update it you must update the BelongsTo<> property on the related object.
 
-T must be a type that extends ufront.db.Object */
+T must be a type that extends `ufront.db.Object` */
 typedef HasOne<T> = Null<T>;
+
+/** A simple wrapper of `List<T>` that exposes only the read operations, it does not allow modifying the list. */
+abstract ReadOnlyList<T>(List<T>) from List<T> {
+
+    public var length(get, never):Int;
+    public var isEmpty(get, never):Bool;
+    public var isNotEmpty(get, never):Bool;
+
+    inline function get_length() return this.length;
+    inline function get_isEmpty() return this.length==0;
+    inline function get_isNotEmpty() return this.length>0;
+
+
+    public inline function iterator() return this.iterator();
+    public inline function filter(predicate) return this.filter(predicate);
+
+    @:to inline function toArray():Array<T> return Lambda.array(this);
+}
