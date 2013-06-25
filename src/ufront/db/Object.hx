@@ -40,7 +40,6 @@ override checkAuthWrite()
 	@noTable
 #else
 	@:keepSub
-	@:rtti
 #end 
 
 @:autoBuild(ufront.db.DBMacros.setupDBObject())
