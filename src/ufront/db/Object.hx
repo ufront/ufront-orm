@@ -218,7 +218,7 @@ class Object #if server extends sys.db.Object #end
 	function hxSerialize( s : haxe.Serializer ) 
 	{
 		s.useEnumIndex = true;
-		s.useCache = true;
+		s.useCache = false;
 
 		var fields:Array<String> = untyped Type.getClass(this).hxSerializeFields;
 		for (f in fields)
