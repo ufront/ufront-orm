@@ -59,38 +59,38 @@ class Object #if server extends sys.db.Object #end
 		/** Updates the "created" and "modified" timestamps, and then saves to the database if checkAuthWrite() and validate() both pass. */
 		override public function insert()
 		{
-			if (this.checkAuthWrite())
+			if (this.validate())
 			{
-				if (this.validate())
+				if (this.checkAuthWrite())
 				{
 					this.created = Date.now();
 					this.modified = Date.now();
 					super.insert();
 				}
-				else {
-					var errors = Lambda.array(validationErrors).join("\n");
-					throw 'Data validation failed for $this: \n' + errors;
-				}
+				else throw 'You do not have permission to save object $this';
 			}
-			else throw 'You do not have permission to save object $this';
+			else {
+				var errors = Lambda.array(validationErrors).join("\n");
+				throw 'Data validation failed for $this: \n' + errors;
+			}
 		}
 
 		/** Updates the "modified" timestamp, and then saves to the database if checkAuthWrite() and validate() both pass. */
 		override public function update()
 		{
-			if (this.checkAuthWrite())
+			if (this.validate())
 			{
-				if (this.validate())
+				if (this.checkAuthWrite())
 				{
 					this.modified = Date.now();
 					super.update();
 				}
-				else {
-					var errors = Lambda.array(validationErrors).join(", ");
-					throw 'Data validation failed for $this: ' + errors;
-				}
+				else throw 'You do not have permission to save object $this';
 			}
-			else throw 'You do not have permission to save object $this';
+			else {
+				var errors = Lambda.array(validationErrors).join(", ");
+				throw 'Data validation failed for $this: ' + errors;
+			}
 		}
 		
 		/** Either updates or inserts the given record into the database, updating timestamps as necessary. 
