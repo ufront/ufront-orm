@@ -1,9 +1,6 @@
 package ufront.db;
 
 import ufront.db.Object; 
-#if server 
-	import sys.db.Manager;
-#end
 import sys.db.Types;
 
 @noTable
