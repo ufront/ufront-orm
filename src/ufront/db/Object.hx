@@ -2,6 +2,9 @@ package ufront.db;
 
 import sys.db.Types;
 import haxe.ds.StringMap;
+#if ufront_clientds
+	import clientds.Promise;
+#end
 
 using StringTools;
 using Lambda;
@@ -156,7 +159,7 @@ class Object #if server extends sys.db.Object #end
 				}
 				else 
 				{
-					var p = new clientds.Promise();
+					var p = new Promise();
 					var errors = Lambda.array(validationErrors).join("\n  ");
 					var msg = 'Data validation failed for $this: \n  $errors';
 					p.resolve(msg.asFailure());
@@ -174,6 +177,21 @@ class Object #if server extends sys.db.Object #end
 
 		public inline function insert() { save(); }
 		public inline function update() { save(); }
+
+		#if ufront_clientds
+			@:skip var allRelationPromises:Array<Promise<Dynamic>>;
+			public function loadRelations():Promise<Object> {
+				allRelationPromises = [];
+				var relArr:Array<String> = untyped Type.getClass(this).hxRelationships;
+				for (relDetails in relArr) {
+					var field = relDetails.split(",")[0];
+					Reflect.callMethod( this, Reflect.field(this,'get_$field'), [] );
+				}
+				var p = new Promise();
+				Promise.when( allRelationPromises ).then( function(_) { p.resolve(this); return null; } );
+				return p;
+			}
+		#end
 	
 		public function toString()
 		{

@@ -392,9 +392,12 @@ class DBMacros
 			{
 				getterBody = macro {
 					#if ufront_clientds
-						if ($privateIdent == null && $idIdent != null)
+						if ($privateIdent == null && $idIdent != null) {
 							// Should resolve synchronously if it's already in the cache
-							$model.clientDS.get($idIdent).then(function (v) $privateIdent = v);
+							var p = $model.clientDS.get($idIdent);
+							p.then(function (v) $privateIdent = v);
+							if (allRelationPromises!=null) allRelationPromises.push( p );
+						}
 					#end
 					return $privateIdent;
 				}
@@ -523,9 +526,12 @@ class DBMacros
 				getterBody = macro {
 					var s = this;
 					#if ufront_clientds
-						if ($ident == null)
+						if ($ident == null) {
 							// Should resolve synchronously if it's already in the cache...
-							$model.clientDS.search($criteriaObj).then(function (res) $ident = Lambda.list(res));
+							var p = $model.clientDS.search($criteriaObj);
+							p.then(function (res) $ident = Lambda.list(res));
+							if (allRelationPromises!=null) allRelationPromises.push( p );
+						}
 					#end
 					return $ident;
 				}
@@ -622,12 +628,15 @@ class DBMacros
 				getterBody = macro {
 					#if ufront_clientds
 						var s = this;
-						if ($ident == null)
+						if ($ident == null) {
 							// Should resolve synchronously if it's already in the cache...
-							$model.clientDS.search($criteriaObj).then(function (res) {
+							var p = $model.clientDS.search($criteriaObj);
+							p.then(function (res) {
 								var i = res.iterator();
 								$ident = (i.hasNext()) ? i.next() : null;
 							});
+							if (allRelationPromises!=null) allRelationPromises.push( p );
+						}
 					#end
 					return $ident;
 				}
@@ -708,9 +717,11 @@ class DBMacros
 					if ($ident.bList == null)
 					{
 						$ident.bList = new List();
-						$bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs)).then(function (items) { 
+						var p = $bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs));
+						p.then(function (items) { 
 							for (i in items) $ident.bList.push(i); 
 						});
+						if (allRelationPromises!=null) allRelationPromises.push( p );
 					}
 					return $ident;
 				};
