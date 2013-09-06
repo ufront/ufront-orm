@@ -157,8 +157,11 @@ class DBMacros
 						if (tp.name != "Null" && tp.name != "SNull")
 						{
 							// If this isn't wrapped in Null<T> or SNull<T>, then add a null-check to validate();
+							#if (hxjava || cpp)
+							#else
 							var nullCheck = macro { if ($i{f.name} == null) validationErrors.set($v{f.name}, $v{f.name} + ' is a required field.'); }
 							BuildTools.addLinesToFunction(validateFunction, nullCheck, 1);
+							#end
 						}
 					case FFun(fn):
 						// See if it's a validation function

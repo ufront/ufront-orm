@@ -288,8 +288,8 @@ class Object #if server extends sys.db.Object #end
 		{
 			if (f == "modified" || f == "created")
 			{
-				var time = s.unserialize();
-				Reflect.setProperty(this, f, (time!=null) ? Date.fromTime(time) : null);
+				var time:Null<Float> = s.unserialize();
+				Reflect.setProperty(this, f, (time!=null) ? Date.fromTime(time) : Date.now());
 			}
 			else if (f.startsWith("ManyToMany"))
 			{
