@@ -15,8 +15,7 @@ import haxe.macro.Expr;
 import haxe.macro.Context;
 import haxe.macro.Format;
 import haxe.macro.Type;
-import tink.macro.tools.MacroTools;
-using tink.macro.tools.MacroTools;
+using tink.MacroApi;
 using StringTools;
 using Lambda;
 

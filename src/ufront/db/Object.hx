@@ -8,7 +8,7 @@ import haxe.ds.StringMap;
 
 using StringTools;
 using Lambda;
-using tink.core.types.Outcome;
+using tink.core.Outcome;
 
 /** Extended Database Object
 
@@ -162,7 +162,7 @@ class Object #if server extends sys.db.Object #end
 					var p = new Promise();
 					var errors = Lambda.array(validationErrors).join("\n  ");
 					var msg = 'Data validation failed for $this: \n  $errors';
-					p.resolve(msg.asFailure());
+					p.resolve( Failure(msg) );
 					return p;
 				}
 			#end

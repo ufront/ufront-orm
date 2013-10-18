@@ -4,7 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import sys.db.RecordMacros;
 import ufront.util.BuildTools;
-using tink.macro.tools.MacroTools;
+using tink.MacroApi;
 using StringTools;
 using Lambda;
 
