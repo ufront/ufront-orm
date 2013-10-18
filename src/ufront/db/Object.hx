@@ -352,6 +352,7 @@ abstract ReadOnlyList<T>(List<T>) from List<T> {
 
     public inline function iterator() return this.iterator();
     public inline function filter(predicate) return this.filter(predicate);
+    public inline function map(fn) return this.map(fn);
 
     @:to inline function toArray():Array<T> return Lambda.array(this);
 }
