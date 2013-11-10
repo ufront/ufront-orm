@@ -45,7 +45,7 @@ override checkAuthWrite()
 	@:keepSub
 #end 
 
-@:autoBuild(ufront.db.DBMacros.setupDBObject())
+#if !macro @:autoBuild(ufront.db.DBMacros.setupDBObject()) #end
 class Object #if server extends sys.db.Object #end
 {
 	public var id:SUId;
@@ -342,17 +342,17 @@ typedef HasOne<T> = Null<T>;
 abstract ReadOnlyList<T>(List<T>) from List<T> {
 
     public var length(get, never):Int;
-    public var isEmpty(get, never):Bool;
-    public var isNotEmpty(get, never):Bool;
 
     inline function get_length() return this.length;
-    inline function get_isEmpty() return this.length==0;
-    inline function get_isNotEmpty() return this.length>0;
 
-
+    public inline function first() return this.first();
+    public inline function isEmpty() return this.isEmpty();
+    public inline function join(sep) return this.join(sep);
+    public inline function last() return this.last();
     public inline function iterator() return this.iterator();
     public inline function filter(predicate) return this.filter(predicate);
     public inline function map(fn) return this.map(fn);
+    public inline function toString() return this.toString();
 
     @:to inline function toArray():Array<T> return Lambda.array(this);
 }

@@ -62,6 +62,10 @@ class ManyToMany<A:Object, B:Object>
 			}
 			else 
 			{
+				#if php
+					// haxe.rtti.Meta.getType(Relationship);
+					// throw "Up to this point";
+				#end
 				m = new Manager(Relationship);
 				m.table_name = tableName;
 				managers.set(tableName, m);
