@@ -51,6 +51,41 @@ Now, to save you the effort and the conditional compilation for switching betwee
 
 Any model you have which extends ufront.db.Object will be subject to our autobuild macro, which processes the relations and means you have to write less boilerplate code to get models talking to each other.  You can read more about these below.
 
+
+Validation
+-------------
+
+```
+	@:validate( name!="" )
+    public var name:SString<50>;
+
+    @:validate( _.length>6, "Password must be at least 6 characters long" )
+    public var password:SString<50>;
+
+    @:validate( ~/[a-z0-9_]@mycompany.com/.match(_), "Your email address is not a valid mycompany.com address" )
+    public var email:SString<50>;
+
+    public var postcode:SInt;
+
+    function validate_postcode() {
+    	var postcodesAvailable = [ 6000, 6001, 6005 ]
+    	if ( postcodesAvailable.indexOf(postcode)==-1 ) 
+    		validationErrors.set( "postcode", 'Sorry, our service is not available in $postcode yet' );
+    }
+```
+
+And then
+
+```
+	var u = new AppUser();
+	u.name = ""; // Fails: "name failed validation."
+	u.name = "jason"; // Okay
+	u.password = "test"; // Fails: "Password must be at least 6 characters long"
+	u.validate(); // True or false
+	u.validationErrors; // [ name=>"name failed validation", password=>"Password must be at least 6 characters long" ]
+	u.save(); // Will only save if validate() is true, otherwise will throw an error
+```
+
 Relationships
 -------------
 

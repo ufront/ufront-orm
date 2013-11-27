@@ -131,7 +131,10 @@ class DBMacros
 						{
 							var e = f.name.resolve();
 							var validationExpr = meta.params[0].substitute({ "_" : e });
-							check = macro if (!$validationExpr) validationErrors.set($v{f.name}, $v{f.name} + ' failed validation.'); 
+							var reason = 
+								if (meta.params.length>1) meta.params[1];
+								else macro $v{f.name} + ' failed validation.';
+							check = macro if (!$validationExpr) validationErrors.set($v{f.name}, $reason); 
 						}
 						catch (e:Dynamic)
 						{
