@@ -208,12 +208,16 @@ class DBMacros
 
 				switch (f.kind)
 				{
-					case FVar(_,_): // Any database fields are vars. 
+					case FVar(ct,_): // Any database fields are vars. 
+
 						// Check they're not skipped, or they have @:includeInSerialization
 						var hasSkipMetadata = f.meta.exists(function (mEntry) return mEntry.name == ":skip") == true;
 						var hasIncludeMetadata = f.meta.exists(function (mEntry) return mEntry.name == ":includeInSerialization") == true;
-						if ( !hasSkipMetadata || hasIncludeMetadata )
+						if ( !hasSkipMetadata || hasIncludeMetadata ) {
 							serializeFields.push(f.name);
+						}
+						
+
 					case FProp(_,_,TPath(tp),_): // All relationships are properties
 						
 						// Extract the type
@@ -233,6 +237,7 @@ class DBMacros
 								serializeFields.push("ManyToMany" + f.name);
 							default: 
 						}
+
 					case _: 
 				}
 			}
