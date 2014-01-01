@@ -208,7 +208,7 @@ class Bytes {
 		#end
 	}
 
-	@:keep public function toString() : String {
+	#if server @:keep #end public function toString() : String {
 		#if neko
 		return new String(untyped __dollar__ssub(b,0,length));
 		#elseif flash9
