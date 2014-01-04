@@ -55,8 +55,8 @@ class Object #if server extends sys.db.Object #end
 	#if server
 		public function new()
 		{
+			validationErrors = new ValidationErrors();
 			super();
-			validationErrors = new StringMap();
 		}
 
 		/** Updates the "created" and "modified" timestamps, and then saves to the database if checkAuthWrite() and validate() both pass. */
@@ -132,7 +132,7 @@ class Object #if server extends sys.db.Object #end
 
 		public function new() 
 		{
-			validationErrors = new StringMap();
+			validationErrors = new ValidationErrors();
 			setupClientDs();
 		}
 
@@ -202,7 +202,7 @@ class Object #if server extends sys.db.Object #end
 
 	/** If a call to validate() fails, it will populate this map with a list of errors.  The key should
 	be the name of the field that failed validation, and the value should be a description of the error. */
-	@:skip public var validationErrors:Map<String,String>;
+	@:skip public var validationErrors:ValidationErrors;
 
 	/** A function to validate the current model.
 	
@@ -217,8 +217,8 @@ class Object #if server extends sys.db.Object #end
 	*/
 	public function validate():Bool 
 	{
-		validationErrors = new StringMap();
-		return (!validationErrors.keys().hasNext());
+		validationErrors.reset();
+		return validationErrors.isValid;
 	}
 
 	/** A function to check if the current user is allowed to read this object.  This always returns true, you should override it to be more useful */
@@ -312,6 +312,7 @@ class Object #if server extends sys.db.Object #end
 				Reflect.setProperty(this, f, s.unserialize());
 			}
 		}
+		this.validationErrors = new ValidationErrors();
 	}
 }
 

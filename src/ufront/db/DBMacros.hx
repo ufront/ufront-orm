@@ -899,7 +899,7 @@ class DBMacros
 					super.validate();
 
 					// If there are no errors, then return true
-					return (!validationErrors.keys().hasNext());
+					return validationErrors.isValid;
 				}
 			}
 
