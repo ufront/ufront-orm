@@ -42,6 +42,15 @@ abstract ValidationErrors( StringMap<Array<String>> ) {
 		return this.get( field ).length == 0;
 	}
 
+	/** Get a list of errors for a particular field as an array.  Array is empty if there are no errors. **/
+	public function areFieldsValid( fields:Array<String> ):Bool {
+		var allValid = true;
+		for ( f in fields ) {
+			if ( isFieldValid(f)==false ) allValid = false;
+		}
+		return allValid;
+	}
+
 	@:to public inline function toMap():Map<String,Array<String>> {
 		return this;
 	}
