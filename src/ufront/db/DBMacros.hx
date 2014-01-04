@@ -112,46 +112,13 @@ class DBMacros
 			// Loop all fields, 
 			var ignoreList = ["new", "validate", "id", "created", "modified"];
 			var validateFnNames = [];
+			var numNullChecks = 1;
 			for (f in fields.copy())
 			{
 				// Skip these ones
 				if (ignoreList.has(f.name)) continue;
 				if (f.access.has(AStatic) == true) continue;
 				if (getMetaFromField(f, ":skip") != null) continue;
-
-				// add validation functions by metadata
-				var validateFieldName = "validate_" + f.name;
-				var validateFieldFn = fields.filter(function (f) return f.name == validateFieldName)[0];
-				for (meta in f.meta)
-				{
-					if (meta.name == ":validate")
-					{
-						var check:Expr;
-						try
-						{
-							var e = f.name.resolve();
-							var validationExpr = meta.params[0].substitute({ "_" : e });
-							var reason = 
-								if (meta.params.length>1) meta.params[1];
-								else macro $v{f.name} + ' failed validation.';
-							check = macro if (!$validationExpr) validationErrors.set($v{f.name}, $reason); 
-						}
-						catch (e:Dynamic)
-						{
-							Context.warning('@:validate() metadata must contain a valid Haxe expression that can be used in an if(...) statement.', meta.pos);
-							Context.warning(Std.string(e), meta.pos);
-						}
-
-						if (validateFieldFn == null)
-						{
-							validateFieldFn = createEmptyFieldValidateFunction(validateFieldName);
-							fields.push(validateFieldFn);
-							validateFnNames.push(validateFieldName);
-						}
-						BuildTools.addLinesToFunction(validateFieldFn, check, 0);
-					}
-				}
-
 
 				switch (f.kind)
 				{
@@ -163,7 +130,7 @@ class DBMacros
 							#if (hxjava || cpp)
 							#else
 							var nullCheck = macro { if ($i{f.name} == null) validationErrors.set($v{f.name}, $v{f.name} + ' is a required field.'); }
-							BuildTools.addLinesToFunction(validateFunction, nullCheck, 1);
+							BuildTools.addLinesToFunction(validateFunction, nullCheck, numNullChecks++);
 							#end
 						}
 					case FFun(fn):
@@ -182,14 +149,52 @@ class DBMacros
 					default: // Only operate on normal variables
 
 				}
+
+				// add validation functions by metadata
+				var validateFieldName = "validate_" + f.name;
+				var validateFieldFn = fields.filter(function (f) return f.name == validateFieldName)[0];
+				for (meta in f.meta)
+				{
+					if (meta.name == ":validate")
+					{
+						var check:Expr;
+						try
+						{
+							var e = f.name.resolve();
+							var validationExpr = meta.params[0].substitute({ "_" : e });
+							var reason = 
+								if (meta.params.length>1) meta.params[1];
+								else macro $v{f.name} + ' failed validation.';
+							// Only bother validating if the value is not null.  If it is null, and it shouldn't be, 
+							// the null checks above should catch it.
+							check = macro if ( $e!=null ) { 
+								if ( !$validationExpr) validationErrors.set($v{f.name}, $reason); 
+							}
+						}
+						catch (e:Dynamic)
+						{
+							Context.warning('@:validate() metadata must contain a valid Haxe expression that can be used in an if(...) statement.', meta.pos);
+							Context.warning(Std.string(e), meta.pos);
+						}
+
+						if (validateFieldFn == null)
+						{
+							validateFieldFn = createEmptyFieldValidateFunction(validateFieldName);
+							fields.push(validateFieldFn);
+							validateFnNames.push(validateFieldName);
+						}
+						BuildTools.addLinesToFunction(validateFieldFn, check, 0);
+					}
+				}
 			}
 
 			// Find any validate_varName() functions
+			// Place them after null checks
 			for (name in validateFnNames)
 			{
 				var fn = name.resolve();
 				var fnCall = macro $fn();
-				BuildTools.addLinesToFunction(validateFunction, fnCall, 1);
+				BuildTools.addLinesToFunction(validateFunction, fnCall, numNullChecks);
 			}
 
 			return fields;
