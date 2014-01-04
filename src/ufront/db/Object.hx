@@ -202,7 +202,7 @@ class Object #if server extends sys.db.Object #end
 
 	/** If a call to validate() fails, it will populate this map with a list of errors.  The key should
 	be the name of the field that failed validation, and the value should be a description of the error. */
-	@:skip public var validationErrors:StringMap<String>;
+	@:skip public var validationErrors:Map<String,String>;
 
 	/** A function to validate the current model.
 	
