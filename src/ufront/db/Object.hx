@@ -217,7 +217,9 @@ class Object #if server extends sys.db.Object #end
 	*/
 	public function validate():Bool 
 	{
-		validationErrors.reset();
+		if ( validationErrors==null )  validationErrors = new ValidationErrors();
+		else validationErrors.reset();
+		
 		return validationErrors.isValid;
 	}
 

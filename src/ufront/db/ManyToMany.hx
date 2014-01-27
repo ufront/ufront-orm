@@ -50,6 +50,15 @@ class ManyToMany<A:Object, B:Object>
 			if (initialise) refreshList();
 		#end 
 	}
+
+	public inline function first() return bList.first();
+	public inline function isEmpty() return bList.isEmpty();
+	public inline function join(sep) return bList.join(sep);
+	public inline function last() return bList.last();
+	public inline function iterator() return bList.iterator();
+	public inline function filter(predicate) return bList.filter(predicate);
+	public inline function map(fn) return bList.map(fn);
+	public inline function toString() return bList.toString();
 	
 	#if server 
 		@:access(sys.db.Manager)
@@ -123,14 +132,11 @@ class ManyToMany<A:Object, B:Object>
 		}
 	#end
 
-	public inline function first()
-	{
-		return bList.first();
-	}
 	
 	/** Add a related object by creating a new Relationship on the appropriate join table.
 	If the object you are adding does not have an ID, insert() will be called so that a valid
 	ID can be obtained. */
+	@:access( sys.db.Manager )
 	public function add(bObject:B)
 	{
 		if (bObject != null && bList.has(bObject) == false)
@@ -141,9 +147,9 @@ class ManyToMany<A:Object, B:Object>
 				if (bObject.id == null) bObject.insert();
 				
 				var r = if (isABeforeB(a,b)) new Relationship(aObject.id, bObject.id);
-				        else                 new Relationship(bObject.id, aObject.id);
+						else                 new Relationship(bObject.id, aObject.id);
 				
-				r.insert();
+				getManager(tableName).doInsert(r);
 			#end
 		}
 	}
@@ -189,11 +195,6 @@ class ManyToMany<A:Object, B:Object>
 		{
 			add (b);
 		}
-	}
-
-	public function iterator():Iterator<B>
-	{
-		return bList.iterator();
 	}
 
 	public function pop():B
