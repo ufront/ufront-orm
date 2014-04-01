@@ -23,6 +23,15 @@ class DBMacros
 	}
 
 	#if macro
+		static function error(msg:String, p:Position):Dynamic
+		{
+			#if (haxe_ver >= 3.100)
+				return Context.fatalError( msg, p );
+			#else
+				return Context.error( msg, p );
+			#end
+		}
+
 		static public function setupRelations(fields:Array<Field>):Array<Field>
 		{
 			var retFields:Array<Field> = null;
@@ -72,7 +81,7 @@ class DBMacros
 											// and without it, we can still warn the user that they can only use it as a normal var.
 											if (!f.meta.exists(function (metaEntry) return metaEntry.name == ":skip"))
 											{
-												Context.error('On field `${f.name}`: ${t.name} can only be used with a normal var, not a property.', f.pos);
+												error('On field `${f.name}`: ${t.name} can only be used with a normal var, not a property.', f.pos);
 											}
 										default: 
 									}
@@ -357,7 +366,7 @@ class DBMacros
 			switch (f.kind) {
 				case FVar(t,e):
 					f.kind = FProp("get","set",t,e);
-				case _: Context.error('On field `${f.name}`: BelongsTo can only be used with a normal var, not a property or a function.', f.pos);
+				case _: error('On field `${f.name}`: BelongsTo can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// Get the type signiature we're using
@@ -493,7 +502,7 @@ class DBMacros
 				case FVar(t,e):
 					fieldType = t;
 					f.kind = FProp("get","null",t,e);
-				case _: Context.error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
+				case _: error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// create var _propertyName (and skip)
@@ -596,7 +605,7 @@ class DBMacros
 			switch (f.kind) {
 				case FVar(t,e):
 					f.kind = FProp("get","null",t,e);
-				case _: Context.error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
+				case _: error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// create var _propertyName (and skip)
@@ -696,7 +705,7 @@ class DBMacros
 					fieldType = t;
 					f.kind = FProp("get","null",t,e);
 					// Create getter or setter
-				case _: Context.error('On field `${f.name}`: ManyToMany can only be used with a normal var, not a property or a function.', f.pos);
+				case _: error('On field `${f.name}`: ManyToMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// create var _propertyName (and skip)
@@ -805,7 +814,7 @@ class DBMacros
 		static function addMetadataForRelatedModel(f:Field, model:TypePath)
 		{
 			var modelPath = nameFromTypePath(model);
-			// var type = try Context.getType(modelPath) catch (e:Dynamic) Context.error('Type $modelPath on field ${f.name} was not found. ($e)', f.pos);
+			// var type = try Context.getType(modelPath) catch (e:Dynamic) error('Type $modelPath on field ${f.name} was not found. ($e)', f.pos);
 			var type = Context.getType(modelPath);
 			var fullName = switch (type)
 			{
