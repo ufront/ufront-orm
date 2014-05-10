@@ -9,6 +9,7 @@
   "version": "1.0.0-beta.3",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
-    "tink_core": ""
+    "tink_core": "",
+    "tink_macro": ""
   }
 }
