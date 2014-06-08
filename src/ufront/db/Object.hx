@@ -20,7 +20,7 @@ This class also uses conditional compilation so that the objects can exist on no
 access to sys.db.*, on these platforms the objects can be created and shared with remoting, and will be able to
 save and fetch records through ClientDS.
 
-We tell if it's a server platform by seeing checking for the #server define, so on your neko/php/cpp targets use `-D server`.
+We tell if it's a server platform by seeing checking for the `#if server` condition, so be sure to include `-D server` in your server hxml files.
 
 Two build macros will be applied to all objects that extends this class:
 
@@ -123,7 +123,6 @@ class Object #if server extends sys.db.Object #end
 				}
 			}
 		}
-	
 	#else
 
 		#if ufront_clientds
@@ -193,12 +192,15 @@ class Object #if server extends sys.db.Object #end
 			}
 		#end
 	
-		public function toString()
-		{
-			var modelName = Type.getClassName(Type.getClass(this));
-			return '$modelName#$id';
-		}
 	#end
+
+
+	#if server override #end public function toString():String
+	{
+		var modelName = Type.getClassName(Type.getClass(this));
+		var idStr = (id!=null) ? ''+id : 'new';
+		return '$modelName#$idStr';
+	}
 
 	/** If a call to validate() fails, it will populate this map with a list of errors.  The key should
 	be the name of the field that failed validation, and the value should be a description of the error. */
