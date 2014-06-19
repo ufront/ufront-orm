@@ -5,11 +5,11 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, permission checking and client-side safety.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Much improved validation/error handling. ManyToMany bug fixes and improvements. Better error handling on build macros. Workaround for sys.db.Manager until Haxe PR 2692 is merged. Only @:keep on the server.",
-  "version": "1.0.0-beta.3",
+  "releasenote": "First release candidate.",
+  "version": "1.0.0-rc.1",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
-    "tink_core": "",
-    "tink_macro": ""
+    "tink_core": "1.0.0-rc.6",
+    "tink_macro": "0.5.0"
   }
 }
