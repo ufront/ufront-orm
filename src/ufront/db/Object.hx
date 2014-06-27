@@ -215,7 +215,7 @@ class Object #if server extends sys.db.Object #end
 	throws an error or returns false, then validation will fail.
 
 	If you override this method to add more custom validation, then we recommend starting with `super.validate()` and
-	ending with `return (!validationErrors.keys.hasNext());`
+	ending with `return (!validationErrors.isValid);`
 	*/
 	public function validate():Bool 
 	{

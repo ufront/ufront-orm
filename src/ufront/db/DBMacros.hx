@@ -631,8 +631,6 @@ class DBMacros
 			var model = modelPath.resolve();
 			if (Context.defined("server"))
 			{
-				relationKey = "$" + relationKey;
-
 				getterBody = macro {
 					var s = this;
 					// if ($ident == null) $ident = $model.manager.search($i{relationKey} == s.id);
@@ -742,11 +740,13 @@ class DBMacros
 					if ($ident.bList == null)
 					{
 						$ident.bList = new List();
-						var p = $bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs));
-						p.then(function (items) { 
-							for (i in items) $ident.bList.push(i); 
-						});
-						if (allRelationPromises!=null) allRelationPromises.push( p );
+						#if ufront_clientds
+							var p = $bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs));
+							p.then(function (items) { 
+								for (i in items) $ident.bList.push(i); 
+							});
+							if (allRelationPromises!=null) allRelationPromises.push( p );
+						#end
 					}
 					return $ident;
 				};

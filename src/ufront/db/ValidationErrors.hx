@@ -36,8 +36,8 @@ abstract ValidationErrors( StringMap<Array<String>> ) {
 		return this.get( field );
 	}
 
-	/** Get a list of errors for a particular field as an array.  Array is empty if there are no errors. **/
-	@:arrayAccess public function isFieldValid( field:String ):Bool {
+	/** Check whether or not a field is has any validation errors. **/
+	public function isFieldValid( field:String ):Bool {
 		if ( !this.exists(field) ) return true;
 		return this.get( field ).length == 0;
 	}
