@@ -1,12 +1,12 @@
 /****
 * Copyright (c) 2012 Jason O'Neil
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
+*
 ****/
 
 package ufront.util;
@@ -19,12 +19,12 @@ using tink.MacroApi;
 using StringTools;
 using Lambda;
 
-#if macro 
-class BuildTools 
+#if macro
+class BuildTools
 {
 	static var fieldsForClass:Map<String, Array<Field>> = new Map();
 
-	/** Allow us to get a list of fields, but will keep a local copy, in case we make changes.  This way 
+	/** Allow us to get a list of fields, but will keep a local copy, in case we make changes.  This way
 	in an autobuild macro you can use BuildTools.getFields() over and over, and modify the array each time,
 	and finally use it as the return value of the build macro.  */
 	public static function getFields():Array<Field>
@@ -56,22 +56,22 @@ class BuildTools
         {
             case FieldType.FProp(_, set, _, _):
                 return getField(set);
-            case FieldType.FVar(_,_): 
+            case FieldType.FVar(_,_):
                 throw "Was expecting " + field.name + " to be a property, but it was a var.";
                 return null;
-            case FieldType.FFun(_): 
+            case FieldType.FFun(_):
                 throw "Was expecting " + field.name + " to be a property, but it was a function.";
                 return null;
         }
     }
 
-    public static function hasClassMetadata(dataName:String, recursive=false, ?cl:Ref<ClassType>):Bool 
+    public static function hasClassMetadata(dataName:String, recursive=false, ?cl:Ref<ClassType>):Bool
     {
         var p = Context.currentPos();                           // Position where the original Widget class is declared
         var localClass = (cl == null) ? haxe.macro.Context.getLocalClass() : cl;    // Class that is being declared, or class that is passed in
         var meta = localClass.get().meta;                       // Metadata of the this class
-        
-        if (meta.has(dataName)) 
+
+        if (meta.has(dataName))
             return true;
         else if (recursive)
         {
@@ -91,7 +91,7 @@ class BuildTools
         var array = getClassMetadata_ArrayOfStrings(dataName, recursive, cl);
         return (array != null && array.length > 0) ? array[0] : null;
     }
-    
+
     /** Searches the metadata for the current class - expects to find one or more strings @dataName("my string", "2nd string"), returns empty array in none found.  Generates an error if one was found but it was the wrong type. Can search recursively up the super-classes if 'recursive' is true */
     public static function getClassMetadata_ArrayOfStrings(dataName:String, recursive=false, ?cl:Ref<ClassType>):Array<String>
     {
@@ -108,19 +108,19 @@ class BuildTools
                     if (metadataItem.params.length == 0) Context.error("Metadata " + dataName + "() exists, but was empty.", p);
                     for (targetMetaData in metadataItem.params)
                     {
-                        switch( targetMetaData.expr ) 
+                        switch( targetMetaData.expr )
                         {
                             case EConst(c):
-                                switch(c) 
+                                switch(c)
                                 {
-                                    case CString(str): 
+                                    case CString(str):
                                         result.push(str);
-                                    default: 
+                                    default:
                                         Context.error("Metadata for " + dataName + "() existed, but was not a constant String.", p);
                                 }
-                            default: 
+                            default:
                                 Context.error("Metadata for " + dataName + "() existed, but was not a constant String.", p);
-                        } 
+                        }
                     }
                 }
             }
@@ -137,7 +137,7 @@ class BuildTools
         return result;
     }
 
-	/** Takes a field declaration, and if it doesn't exist, adds it.  If it does exist, it returns the 
+	/** Takes a field declaration, and if it doesn't exist, adds it.  If it does exist, it returns the
 	existing one. */
     public static function getOrCreateField(fieldToAdd:Field)
     {
@@ -158,12 +158,12 @@ class BuildTools
         }
     }
 
-    /** Creates a new property on the class, with the given name and type.  Optionally can set a setter or 
+    /** Creates a new property on the class, with the given name and type.  Optionally can set a setter or
     a getter.  Returns a simple object containing the fields for the property, the setter and the getter. */
     public static function getOrCreateProperty(propertyName:String, propertyType:haxe.macro.ComplexType, useGetter:Bool, useSetter:Bool):{ property:Field, getter:Field, setter:Field }
     {
         var p = Context.currentPos();                           // Position where the original Widget class is declared
-        
+
         var getterString = (useGetter) ? "get_" + propertyName : "default";
         var setterString = (useSetter) ? "set_" + propertyName : "default";
         var variableRef = propertyName.resolve();
@@ -203,7 +203,7 @@ class BuildTools
         {
             var getterBody = macro {
                 // Just return the current value... If they want to add lines to this function later then they can.
-                return $variableRef; 
+                return $variableRef;
             };
             getter = getOrCreateField({
                 pos: p,
@@ -225,8 +225,8 @@ class BuildTools
         if (useSetter)
         {
             var setterBody = macro {
-                $variableRef = v; 
-                return v; 
+                $variableRef = v;
+                return v;
             };
             setter = getOrCreateField({
                 pos: p,
@@ -279,7 +279,7 @@ class BuildTools
         {
             case FFun(f):
                 fn = f;
-            default: 
+            default:
                 Context.error("addLinesToFunction was sent a field that is not a function.", Context.currentPos());
         }
 
@@ -292,7 +292,7 @@ class BuildTools
             default:
                 Context.error("addLinesToFunction was expecting an EBlock as the function body, but got something else.", Context.currentPos());
         }
-        
+
         addLinesToBlock(body, lines, whereToAdd);
     }
 
@@ -355,13 +355,13 @@ class BuildTools
         }
 
 
-        
+
         return parts;
     }
 
-    /** Takes the output of an expression such as Std.format(), and searches for variables used... 
+    /** Takes the output of an expression such as Std.format(), and searches for variables used...
     Basic implementation so far, only looks for basic EConst(CIdent(myvar)) */
-    public static function extractVariablesUsedInInterpolation(expr:Expr)  
+    public static function extractVariablesUsedInInterpolation(expr:Expr)
     {
         var variablesInside:Array<String> = [];
         switch(expr.expr)
@@ -400,20 +400,20 @@ class BuildTools
 
 
 
-    /** Reads a file, relative either to the project class paths, or relative to a specific class.  It will try an absolute path 
+    /** Reads a file, relative either to the project class paths, or relative to a specific class.  It will try an absolute path
     first (testing against each of the class paths), and then a relative path, testing against each of the class paths in the directory
     specified by "currentPath".  If currentPath is not given, it will be set to the path of Context.getLocalClass(); */
     public static function loadFileFromLocalContext(filename:String, ?currentPath:String):String
     {
         if (currentPath == null) currentPath = Context.getLocalClass().toString();
         var fileContents = null;
-        try 
+        try
         {
             fileContents = sys.io.File.getContent(Context.resolvePath(filename));
         }
         catch (e:Dynamic)
         {
-            try 
+            try
             {
                 // That was searching by fully qualified classpath, but try just the same folder....
                 currentPath;                        // eg. my.pack.Widget
@@ -432,9 +432,9 @@ class BuildTools
         return fileContents;
     }
 
-    /** 
+    /**
     * Generate a function call
-    * Only tested with functions that are part of the same class so far... 
+    * Only tested with functions that are part of the same class so far...
     */
     public static function writeSimpleFunctionCall(fn:Field, arguments:Array<Expr>)
     {
@@ -452,11 +452,11 @@ class BuildTools
     */
     public static function fieldsFromAnonymousType(complexType:ComplexType):Array<Field>
     {
-        return switch (complexType) 
+        return switch (complexType)
         {
             case TAnonymous(fields):
                 fields;
-            default: 
+            default:
                 Context.warning("BuildTools.fieldsFromAnonymousType() failed: the complexType provided was something other than TAnonymous.", Context.currentPos());
                 null;
         }

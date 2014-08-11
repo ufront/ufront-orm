@@ -45,7 +45,7 @@ class DBMacros
 				{
 					switch (f.kind)
 					{
-						case FVar(TPath(relType), _): 
+						case FVar(TPath(relType), _):
 							// See if this var is one of our relationship types, and if so, process it.
 							switch (relType)
 							{
@@ -65,7 +65,7 @@ class DBMacros
 											retFields = processBelongsToRelations(fields, f, modelType, true);
 										case _:
 									}
-								case _: 
+								case _:
 							}
 						// If they're trying to use a relation as a property, give an error
 						case FProp(_, _, complexType, _):
@@ -83,7 +83,7 @@ class DBMacros
 											{
 												error('On field `${f.name}`: ${t.name} can only be used with a normal var, not a property.', f.pos);
 											}
-										default: 
+										default:
 									}
 								case _:
 							}
@@ -118,7 +118,7 @@ class DBMacros
 				fields.push(validateFunction);
 			}
 
-			// Loop all fields, 
+			// Loop all fields,
 			var ignoreList = ["new", "validate", "id", "created", "modified"];
 			var validateFnNames = [];
 			var numNullChecks = 1;
@@ -171,13 +171,13 @@ class DBMacros
 						{
 							var e = f.name.resolve();
 							var validationExpr = meta.params[0].substitute({ "_" : e });
-							var reason = 
+							var reason =
 								if (meta.params.length>1) meta.params[1];
 								else macro $v{f.name} + ' failed validation.';
-							// Only bother validating if the value is not null.  If it is null, and it shouldn't be, 
+							// Only bother validating if the value is not null.  If it is null, and it shouldn't be,
 							// the null checks above should catch it.
-							check = macro if ( $e!=null ) { 
-								if ( !$validationExpr) validationErrors.set($v{f.name}, $reason); 
+							check = macro if ( $e!=null ) {
+								if ( !$validationExpr) validationErrors.set($v{f.name}, $reason);
 							}
 						}
 						catch (e:Dynamic)
@@ -222,7 +222,7 @@ class DBMacros
 
 				switch (f.kind)
 				{
-					case FVar(ct,_): // Any database fields are vars. 
+					case FVar(ct,_): // Any database fields are vars.
 
 						// Check they're not skipped, or they have @:includeInSerialization
 						var hasSkipMetadata = f.meta.exists(function (mEntry) return mEntry.name == ":skip") == true;
@@ -230,32 +230,32 @@ class DBMacros
 						if ( !hasSkipMetadata || hasIncludeMetadata ) {
 							serializeFields.push(f.name);
 						}
-						
+
 
 					case FProp(_,_,TPath(tp),_): // All relationships are properties
-						
+
 						// Extract the type
 						var className = getRelatedModelTypeFromField(f);
 						var foreignKey = getRelationKeyForField(f);
 						switch (tp)
 						{
 							case { name: "BelongsTo", params:_, pack:_, sub:_ }
-							   | { name: "Null", params:[TPType(TPath({ name: "BelongsTo", params:_, pack:_, sub:_ }))], pack:_, sub:_ }: 
+							   | { name: "Null", params:[TPType(TPath({ name: "BelongsTo", params:_, pack:_, sub:_ }))], pack:_, sub:_ }:
 								relationFields.push('${f.name},BelongsTo,$className');
-							case { name: "HasOne", params:_, pack:_, sub:_ }: 
+							case { name: "HasOne", params:_, pack:_, sub:_ }:
 								relationFields.push('${f.name},HasOne,$className,$foreignKey');
-							case { name: "HasMany", params:_, pack:_, sub:_ }: 
+							case { name: "HasMany", params:_, pack:_, sub:_ }:
 								relationFields.push('${f.name},HasMany,$className,$foreignKey');
-							case { name: "ManyToMany", params:_, pack:_, sub:_ }: 
+							case { name: "ManyToMany", params:_, pack:_, sub:_ }:
 								relationFields.push('${f.name},ManyToMany,$className');
 								serializeFields.push("ManyToMany" + f.name);
-							default: 
+							default:
 						}
 
-					case _: 
+					case _:
 				}
 			}
-			
+
 			// Check for fields in any super classes too...
 			var currentClass = Context.getLocalClass().get();
 			while (currentClass.superClass != null)
@@ -266,19 +266,19 @@ class DBMacros
 					// trace (f.type);
 					var className = getRelatedModelTypeFromField(f);
 					var foreignKey = getRelationKeyForField(f);
-						
+
 					switch (f)
 					{
 						case { kind: FVar(AccNormal, AccNormal) } if (!f.meta.has(":skip")):
 							// Any database fields are vars
-							serializeFields.push(f.name); 
+							serializeFields.push(f.name);
 						case { kind: FVar(AccCall,_), type: TType(t,_) }:
 							// All relationships are properties
 							if (t.get().name == "BelongsTo") relationFields.push('${f.name},BelongsTo,$className');
 							else if (t.get().name == "HasOne") relationFields.push('${f.name},HasOne,$className,$foreignKey');
 							else if (t.get().name == "HasMany") relationFields.push('${f.name},HasMany,$className,$foreignKey');
 						case { kind: FVar(AccCall,_), type: TInst(t,_) }:
-							if (t.get().name == "ManyToMany") 
+							if (t.get().name == "ManyToMany")
 							{
 								relationFields.push('${f.name},ManyToMany,$className');
 								serializeFields.push("ManyToMany" + f.name);
@@ -340,7 +340,7 @@ class DBMacros
 				// base the name of the ident in our metadata
 				// figure out the type by analysing the type given in our field, opening the class, and looking for @:id() metadata or id:SId or id:SUId
 			var idType:ComplexType;
-			if (allowNull) 
+			if (allowNull)
 			{
 				idType = TPath({
 					sub: null,
@@ -349,7 +349,7 @@ class DBMacros
 					name: "Null"
 				});
 			}
-			else 
+			else
 			{
 				idType = "SUInt".asComplexType();
 			}
@@ -368,7 +368,7 @@ class DBMacros
 					f.kind = FProp("get","set",t,e);
 				case _: error('On field `${f.name}`: BelongsTo can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// Get the type signiature we're using
 			// generally _fieldName:T or _fieldName:Null<T>
 
@@ -382,11 +382,11 @@ class DBMacros
 					name: "Null"
 				});
 			}
-			else 
+			else
 			{
 				modelTypeSig = TPath(modelType);
 			}
-			
+
 			// Add the private container field
 
 			fields.push({
@@ -394,7 +394,7 @@ class DBMacros
 				name: "_" + f.name,
 				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
 				kind: FVar(modelTypeSig),
-				doc: null, 
+				doc: null,
 				access: [APrivate]
 			});
 
@@ -413,7 +413,7 @@ class DBMacros
 					return $privateIdent;
 				};
 			}
-			else 
+			else
 			{
 				getterBody = macro {
 					#if ufront_clientds
@@ -452,7 +452,7 @@ class DBMacros
 					return $privateIdent;
 				}
 			}
-			else 
+			else
 			{
 				setterBody = macro {
 					$privateIdent = v;
@@ -504,7 +504,7 @@ class DBMacros
 					f.kind = FProp("get","null",t,e);
 				case _: error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// create var _propertyName (and skip)
 			// Add the private container field
 			// generally _fieldName:T
@@ -515,7 +515,7 @@ class DBMacros
 				name: "_" + f.name,
 				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
 				kind: FVar(iterableTypeSig),
-				doc: null, 
+				doc: null,
 				access: [APrivate]
 			});
 
@@ -527,7 +527,7 @@ class DBMacros
 			// create getter
 
 			var getterBody:Expr;
-			var modelPath = nameFromTypePath(modelType); 
+			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
 			if (Context.defined("server"))
 			{
@@ -542,7 +542,7 @@ class DBMacros
 					return $ident;
 				};
 			}
-			else 
+			else
 			{
 				var criteriaObj = {
 					expr: EObjectDecl([ { field: relationKey, expr: macro s.id } ]),
@@ -587,9 +587,9 @@ class DBMacros
 			// Add the model path to some metadata, in a later build macro this metadata will be used to populate a "relations" array
 			addMetadataForRelatedModel(f, modelType);
 
-			// Generate the type we want.  If it was HasMany<T>, the 
+			// Generate the type we want.  If it was HasMany<T>, the
 			// generated type will be Null<T>
-			
+
 			var modelTypeSig = TPath({
 				sub: null,
 				params: [TPType(TPath(modelType))],
@@ -601,13 +601,13 @@ class DBMacros
 			// Switch kind
 			//  - if var, change to property (get,null), get the fieldType
 			//  - if property or function, throw error.  (if they want to do something custom, don't use the macro)
-			
+
 			switch (f.kind) {
 				case FVar(t,e):
 					f.kind = FProp("get","null",t,e);
 				case _: error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// create var _propertyName (and skip)
 
 			fields.push({
@@ -615,7 +615,7 @@ class DBMacros
 				name: "_" + f.name,
 				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
 				kind: FVar(modelTypeSig),
-				doc: null, 
+				doc: null,
 				access: [APrivate]
 			});
 
@@ -642,7 +642,7 @@ class DBMacros
 					return $ident;
 				};
 			}
-			else 
+			else
 			{
 				var criteriaObj = {
 					expr: EObjectDecl([ { field: relationKey, expr: macro s.id } ]),
@@ -705,7 +705,7 @@ class DBMacros
 					// Create getter or setter
 				case _: error('On field `${f.name}`: ManyToMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// create var _propertyName (and skip)
 			// Add the private container field
 			// generally _fieldName:T
@@ -714,14 +714,14 @@ class DBMacros
 				name: "_" + f.name,
 				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
 				kind: FVar(fieldType),
-				doc: null, 
+				doc: null,
 				access: [APrivate]
 			});
 
 			// Get the various exprs used in the getter
 
 			var ident = ("_" + f.name).resolve();
-			
+
 			// create getter
 
 			var getterBody:Expr;
@@ -742,8 +742,8 @@ class DBMacros
 						$ident.bList = new List();
 						#if ufront_clientds
 							var p = $bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs));
-							p.then(function (items) { 
-								for (i in items) $ident.bList.push(i); 
+							p.then(function (items) {
+								for (i in items) $ident.bList.push(i);
 							});
 							if (allRelationPromises!=null) allRelationPromises.push( p );
 						#end
@@ -790,7 +790,7 @@ class DBMacros
 			// Create the model if it doesn't already exist
 			var className = pack.join(".") + "." + modelName;
 			if ( !manyToManyModels.has(className) )
-			{ 
+			{
 				manyToManyModels.push(className);
 				Context.defineType({
 					pos: Context.currentPos(),
@@ -852,7 +852,7 @@ class DBMacros
 		static function getMetaFromField(?f:Field, ?cf:ClassField, name:String)
 		{
 			var metadata:Metadata;
-			
+
 			if (f != null) metadata = f.meta;
 			if (cf != null) metadata = cf.meta.get();
 
@@ -871,7 +871,7 @@ class DBMacros
 		static function getRelatedModelTypeFromField(?f:Field, ?cf:ClassField)
 		{
 			var metadata:Metadata;
-			
+
 			if (f != null) metadata = f.meta;
 			if (cf != null) metadata = cf.meta.get();
 
@@ -904,12 +904,12 @@ class DBMacros
 			return BuildTools.fieldsFromAnonymousType(ct)[0];
 		}
 
-		static function createEmptyValidateFunction():Field 
+		static function createEmptyValidateFunction():Field
 		{
 			var ct = macro : {
 				override public function validate():Bool
 				{
-					// Do super class validation also. 
+					// Do super class validation also.
 					super.validate();
 
 					// If there are no errors, then return true
@@ -920,7 +920,7 @@ class DBMacros
 			return BuildTools.fieldsFromAnonymousType(ct)[0];
 		}
 
-		static function createEmptyFieldValidateFunction(validateFnName):Field 
+		static function createEmptyFieldValidateFunction(validateFnName):Field
 		{
 			var ct = macro : {
 				public function fnName() {}
@@ -930,7 +930,7 @@ class DBMacros
 			return f;
 		}
 
-		static function createFieldsArray():Field 
+		static function createFieldsArray():Field
 		{
 			var ct = macro : {
 				public static var hxSerializeFields:Array<String> = [];
@@ -939,7 +939,7 @@ class DBMacros
 			return BuildTools.fieldsFromAnonymousType(ct)[0];
 		}
 
-		static function createRelationshipsArray():Field 
+		static function createRelationshipsArray():Field
 		{
 			var ct = macro : {
 				public static var hxRelationships:Array<String> = [];

@@ -1,11 +1,11 @@
 package ufront.db;
 
-#if server 
+#if server
 	import sys.db.Manager;
 #end
 import sys.db.Types;
 import ufront.db.Object;
-import ufront.db.Relationship; 
+import ufront.db.Relationship;
 import haxe.ds.*;
 using Lambda;
 
@@ -13,7 +13,7 @@ using Lambda;
 // Throughout this class, I've had to replace SPOD macro calls with the "unsafe" runtime calls.
 // The reason for this is that the macro versions hardcode the table name into the query - and so
 // they always use the "Relationship" table, rather than our custom table names for each join.
-// In the code, I've left the macro line above the "unsafe" line, but commented out, so that 
+// In the code, I've left the macro line above the "unsafe" line, but commented out, so that
 // you can see essentially what it is that we're trying to do.
 
 // Note 2:
@@ -30,8 +30,8 @@ class ManyToMany<A:Object, B:Object>
 	var bListIDs:List<Int>;
 
 	public var length(get,null):Int;
-	
-	#if server 
+
+	#if server
 		var tableName:String;
 		static var managers:StringMap<Manager<Relationship>> = new StringMap();
 		var bManager:Manager<B>;
@@ -41,14 +41,14 @@ class ManyToMany<A:Object, B:Object>
 	public function new(aObject:A, bClass:Class<B>, ?initialise=true)
 	{
 		this.aObject = aObject;
-		#if server 
+		#if server
 			this.a = Type.getClass(aObject);
 			this.b = bClass;
 			bManager = untyped b.manager;
 			this.tableName = generateTableName(a,b);
 			this.manager = getManager(tableName);
 			if (initialise) refreshList();
-		#end 
+		#end
 	}
 
 	public inline function first() return bList.first();
@@ -59,8 +59,8 @@ class ManyToMany<A:Object, B:Object>
 	public inline function filter(predicate) return bList.filter(predicate);
 	public inline function map(fn) return bList.map(fn);
 	public inline function toString() return bList.toString();
-	
-	#if server 
+
+	#if server
 		@:access(sys.db.Manager)
 		static function getManager(tableName:String):Manager<Relationship>
 		{
@@ -69,7 +69,7 @@ class ManyToMany<A:Object, B:Object>
 			{
 				m = managers.get(tableName);
 			}
-			else 
+			else
 			{
 				#if php
 					// haxe.rtti.Meta.getType(Relationship);
@@ -91,7 +91,7 @@ class ManyToMany<A:Object, B:Object>
 			arr.sort(function(x,y) return Reflect.compare(x,y));
 			return (arr[0] == aName);
 		}
-			
+
 		static public function generateTableName(a:Class<Dynamic>, b:Class<Dynamic>)
 		{
 			// Get the names (class name, last section after package list)
@@ -106,7 +106,7 @@ class ManyToMany<A:Object, B:Object>
 			arr.unshift("_join");
 			return arr.join('_');
 		}
-			
+
 		@:access(sys.db.Manager)
 		public function refreshList()
 		{
@@ -115,14 +115,14 @@ class ManyToMany<A:Object, B:Object>
 				var id = aObject.id;
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
-				
+
 				// var relationships = manager.search($a == id);
 				var relationships = manager.unsafeObjects("SELECT * FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(id), false);
 				if (relationships.length > 0)
 				{
 					bListIDs = relationships.map(function (r:Relationship) { return Reflect.field(r, bColumn); });
-					
-					// Search B table for our list of IDs.  
+
+					// Search B table for our list of IDs.
 					// bList = bManager.search($id in bListIDs);
 					bList = bManager.unsafeObjects("SELECT * FROM `" + bManager.table_name + "` WHERE " + Manager.quoteList("id", bListIDs), false);
 				}
@@ -132,7 +132,7 @@ class ManyToMany<A:Object, B:Object>
 		}
 	#end
 
-	
+
 	/** Add a related object by creating a new Relationship on the appropriate join table.
 	If the object you are adding does not have an ID, insert() will be called so that a valid
 	ID can be obtained. */
@@ -143,12 +143,12 @@ class ManyToMany<A:Object, B:Object>
 		{
 			bList.add(bObject);
 
-			#if server 
+			#if server
 				if (bObject.id == null) bObject.insert();
-				
+
 				var r = if (isABeforeB(a,b)) new Relationship(aObject.id, bObject.id);
 						else                 new Relationship(bObject.id, aObject.id);
-				
+
 				getManager(tableName).doInsert(r);
 			#end
 		}
@@ -160,27 +160,27 @@ class ManyToMany<A:Object, B:Object>
 		{
 			bList.remove(bObject);
 
-			#if server 
+			#if server
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
-				
+
 				// manager.delete($a == aObject.id && $b == bObject.id);
 				manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id) + " AND " + bColumn + " = " + Manager.quoteAny(bObject.id));
-			#end 
+			#end
 		}
 	}
 
 	public function clear()
 	{
 		bList.clear();
-		#if server 
+		#if server
 			if (aObject != null)
 			{
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				// manager.delete($a == aObject.id);
 				manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id));
 			}
-		#end 
+		#end
 	}
 
 	public function setList(newBList:Iterable<B>)
@@ -206,10 +206,10 @@ class ManyToMany<A:Object, B:Object>
 			#if server
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
-				
+
 				// manager.delete($a == aObject.id && $b == bObject.id);
 				manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id) + " AND " + bColumn + " = " + Manager.quoteAny(bObject.id));
-			#end 
+			#end
 		}
 
 		return bObject;
@@ -227,7 +227,7 @@ class ManyToMany<A:Object, B:Object>
 	#if server
 		/**
 		* A function to at once retrieve the related IDs of several objects.
-		* 
+		*
 		*/
 		public static function relatedIDsforObjects(aModel:Class<Object>, bModel:Class<Object>, ?aObjectIDs:Iterable<SUId>):IntMap<List<Int>>
 		{
@@ -241,7 +241,7 @@ class ManyToMany<A:Object, B:Object>
 			var relationships;
 			if (aObjectIDs == null)
 				relationships = manager.all();
-			else 
+			else
 				relationships = manager.unsafeObjects("SELECT * FROM `" + tableName + "` WHERE " + Manager.quoteList(aColumn, aObjectIDs), false);
 
 			// Put them into an Intmap
