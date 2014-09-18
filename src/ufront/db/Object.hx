@@ -329,16 +329,22 @@ typedef BelongsTo<T> = T;
 
 /** HasMany relation
 
-This type is transformed into an Iterable that lets you iterate over related objects.  Related objects are determined by a corresponding "BelongsTo<T>" in the related class.
+This type is transformed into an Iterable that lets you iterate over related objects.
+Related objects are determined by a corresponding "BelongsTo<T>" in the related class.
 
-While the real data type here is a `List<T>`, we expose it as a `ReadOnlyList<T>` so that you are not tempted to push new objects to the list or remove objects from the list.  To update it you must update the related property on each related object.
+Please note that at this time setting or modifying the list has no effect on the database.
+To update the relations in the database you must update the related property on each related object.
 
 T must be a type that extends `ufront.db.Object` */
-typedef HasMany<T> = ReadOnlyList<T>
+typedef HasMany<T> = List<T>
 
 /** HasOne relation
 
-This type is transformed into a property that lets you fetch a single related object.  Related objects are determined by a corresponding "BelongsTo<T>" in the related class.  The property is read only - to update it you must update the BelongsTo<> property on the related object.
+This type is transformed into a property that lets you fetch a single related object.
+Related objects are determined by a corresponding "BelongsTo<T>" in the related class.
+
+Setting the property has no effect on the database.
+To update a HasOne relationship in the database, you must update the BelongsTo<> property on the related object.
 
 T must be a type that extends `ufront.db.Object` */
 typedef HasOne<T> = Null<T>;

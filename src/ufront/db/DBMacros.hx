@@ -162,7 +162,7 @@ class DBMacros
 				// add validation functions by metadata
 				var validateFieldName = "validate_" + f.name;
 				var validateFieldFn = fields.filter(function (f) return f.name == validateFieldName)[0];
-				for (meta in f.meta)
+				if (f.meta!=null) for (meta in f.meta)
 				{
 					if (meta.name == ":validate")
 					{
@@ -491,7 +491,6 @@ class DBMacros
 			// Add the model path to some metadata, in a later build macro this metadata will be used to populate a "relations" array
 			addMetadataForRelatedModel(f, modelType);
 
-
 			// change var to property (get,null)
 			// Switch kind
 			//  - if var, change to property (get,null), get the fieldType
@@ -501,80 +500,49 @@ class DBMacros
 			switch (f.kind) {
 				case FVar(t,e):
 					fieldType = t;
-					f.kind = FProp("get","null",t,e);
+					f.kind = FProp("get","set",t,e);
 				case _: error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
-
-			// create var _propertyName (and skip)
-			// Add the private container field
-			// generally _fieldName:T
+			
+			// Values needed for reification of fields.
 			var modelTypeSig:ComplexType = TPath(modelType);
 			var iterableTypeSig:ComplexType = macro :List<$modelTypeSig>;
-			fields.push({
-				pos: f.pos,
-				name: "_" + f.name,
-				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
-				kind: FVar(iterableTypeSig),
-				doc: null,
-				access: [APrivate]
-			});
-
-			// Get the various exprs used in the getter
-
-			var ident = ("_" + f.name).resolve();
+			var privateName = '_${f.name}';
+			var privateIdent = privateName.resolve();
+			var getterName = 'get_${f.name}';
+			var setterName = 'set_${f.name}';
 			var relationKey = getRelationKeyForField(f);
-
-			// create getter
-
-			var getterBody:Expr;
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
-			if (Context.defined("server"))
-			{
-				getterBody = macro {
-					var s = this;
-					// if ($ident == null) $ident = $model.manager.search($i{relationKey} == s.id);
-					if ($ident == null) {
-						var quotedID = sys.db.Manager.quoteAny(s.id);
-						var table = untyped $model.manager.table_name;
-						$ident = $model.manager.unsafeObjects('SELECT * FROM ' + table + ' WHERE $relationKey = '+quotedID, null);
-					}
-					return $ident;
-				};
-			}
-			else
-			{
-				var criteriaObj = {
-					expr: EObjectDecl([ { field: relationKey, expr: macro s.id } ]),
-					pos: Context.currentPos()
-				}
-				getterBody = macro {
-					var s = this;
-					#if ufront_clientds
-						if ($ident == null) {
-							// Should resolve synchronously if it's already in the cache...
-							var p = $model.clientDS.search($criteriaObj);
-							p.then(function (res) $ident = Lambda.list(res));
+			
+			// Use reification to create the private field, the getter and the setter.
+			var fieldsToAdd = macro class {
+				@:skip private var $privateName:List<$modelTypeSig>;
+				private function $getterName():List<$modelTypeSig> {
+					#if server
+						// if ($privateIdent == null) $privateIdent = $model.manager.search($i{relationKey} == s.id);
+						if ($privateIdent == null) {
+							var quotedID = sys.db.Manager.quoteAny(this.id);
+							var table = untyped $model.manager.table_name;
+							$privateIdent = $model.manager.unsafeObjects('SELECT * FROM ' + table + ' WHERE '+$v{relationKey}+' = '+quotedID, null);
+						}
+					#elseif ufront_clientds
+						if ($privateIdent == null) {
+							// Should resolve synchronously if it's already in the cache, otherwise it will return null and begin processing the request.
+							var p = $model.clientDS.search({ $relationKey: this.id });
+							p.then(function (res) $privateIdent = Lambda.list(res));
 							if (allRelationPromises!=null) allRelationPromises.push( p );
 						}
 					#end
-					return $ident;
+					return $privateIdent;
+				}
+				private function $setterName( list:List<$modelTypeSig> ):List<$modelTypeSig> {
+					return $privateIdent = list;
 				}
 			}
-
-			fields.push({
-				pos: f.pos,
-				name: "get_" + f.name,
-				meta: [],
-				kind: FieldType.FFun({
-					ret: fieldType,
-					params: [],
-					expr: getterBody,
-					args: []
-				}),
-				doc: null,
-				access: [APrivate]
-			});
+			for( field in fieldsToAdd.fields ) {
+				fields.push( field );
+			}
 
 			return fields;
 		}
@@ -604,80 +572,47 @@ class DBMacros
 
 			switch (f.kind) {
 				case FVar(t,e):
-					f.kind = FProp("get","null",t,e);
+					f.kind = FProp("get","set",t,e);
 				case _: error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
 			};
-
-			// create var _propertyName (and skip)
-
-			fields.push({
-				pos: f.pos,
-				name: "_" + f.name,
-				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
-				kind: FVar(modelTypeSig),
-				doc: null,
-				access: [APrivate]
-			});
-
-			// Get the various exprs used in the getter
-
-			var ident = ("_" + f.name).resolve();
+			
+			// Values needed for reification of fields.
+			var privateName = ("_" + f.name);
+			var privateIdent = privateName.resolve();
+			var getterName = ("get_" + f.name);
+			var setterName = ("set_" + f.name);
 			var relationKey = getRelationKeyForField(f);
-
-			// create getter
-
-			var getterBody:Expr;
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
-			if (Context.defined("server"))
-			{
-				getterBody = macro {
-					var s = this;
-					// if ($ident == null) $ident = $model.manager.search($i{relationKey} == s.id);
-					if ($ident == null) {
-						var quotedID = sys.db.Manager.quoteAny(s.id);
-						var table = untyped $model.manager.table_name;
-						$ident = $model.manager.unsafeObjects('SELECT * FROM ' + table + ' WHERE $relationKey = '+quotedID, null).first();
-					}
-					return $ident;
-				};
-			}
-			else
-			{
-				var criteriaObj = {
-					expr: EObjectDecl([ { field: relationKey, expr: macro s.id } ]),
-					pos: Context.currentPos()
-				}
-				getterBody = macro {
-					#if ufront_clientds
-						var s = this;
-						if ($ident == null) {
-							// Should resolve synchronously if it's already in the cache...
-							var p = $model.clientDS.search($criteriaObj);
-							p.then(function (res) {
-								var i = res.iterator();
-								$ident = (i.hasNext()) ? i.next() : null;
-							});
+			
+			// Use reification to create the private field, the getter and the setter.
+			var fieldsToAdd = macro class {
+				@:skip private var $privateName:$modelTypeSig;
+				private function $getterName():$modelTypeSig {
+					#if server
+						// if ($privateIdent == null) $privateIdent = $model.manager.search($i{relationKey} == s.id);
+						if ($privateIdent == null) {
+							var quotedID = sys.db.Manager.quoteAny(this.id);
+							var table = untyped $model.manager.table_name;
+							$privateIdent = $model.manager.unsafeObjects('SELECT * FROM ' + table + ' WHERE '+$v{relationKey}+' = '+quotedID, null).first();
+						}
+					#elseif ufront_clientds
+						if ($privateIdent == null) {
+							// Should resolve synchronously if it's already in the cache, otherwise it will return null and begin processing the request.
+							var p = $model.clientDS.search({ $relationKey: this.id });
+							p.then(function (res) $privateIdent = res.iterator().next() );
 							if (allRelationPromises!=null) allRelationPromises.push( p );
 						}
 					#end
-					return $ident;
+					return $privateIdent;
+				}
+				private function $setterName( obj:$modelTypeSig ):$modelTypeSig {
+					return $privateIdent = obj;
 				}
 			}
-
-			fields.push({
-				pos: f.pos,
-				name: "get_" + f.name,
-				meta: [],
-				kind: FieldType.FFun({
-					ret: modelTypeSig,
-					params: [],
-					expr: getterBody,
-					args: []
-				}),
-				doc: null,
-				access: [APrivate]
-			});
+			for( field in fieldsToAdd.fields ) {
+				fields.push( field );
+			}
 
 			return fields;
 		}
@@ -831,13 +766,14 @@ class DBMacros
 
 			if (relationKeyMeta != null)
 			{
-				// if there is @:relationKey("name") metadata, use that
+				// If there is @:relationKey("nameOfBelongsToField") metadata, use that
 				var rIdent = relationKeyMeta[0];
 				switch (rIdent.expr)
 				{
 					case EConst(CIdent(r)):
 						relationKey = r;
 					case _:
+						Context.fatalError( 'Unable to understand @:relationKey metadata on field ${f.name}.\nPlease use a simple field name without quotation marks.', f.pos );
 				}
 			}
 			else
@@ -856,10 +792,11 @@ class DBMacros
 			if (f != null) metadata = f.meta;
 			if (cf != null) metadata = cf.meta.get();
 
-			for (metaItem in metadata)
-			{
-				if (metaItem.name == name) return metaItem.params;
-			}
+			if ( metadata!=null )
+				for (metaItem in metadata)
+				{
+					if (metaItem.name == name) return metaItem.params;
+				}
 			return null;
 		}
 
