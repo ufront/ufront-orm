@@ -5,8 +5,8 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, permission checking and client-side safety.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Second release candidate. Minor fixes.",
-  "version": "1.0.0-rc.2",
+  "releasenote": "Third release candidate. HasMany and HasOne are now writeable properties, rather than read only. This allows easier creation of related objects fitting together without necessarily being saved to the DB yet.",
+  "version": "1.0.0-rc.3",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": "1.0.0-rc.6",
