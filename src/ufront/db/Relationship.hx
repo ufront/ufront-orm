@@ -14,5 +14,6 @@ class Relationship extends Object
 		super();
 		this.r1 = r1;
 		this.r2 = r2;
+		this.modified = this.created = Date.now();
 	}
 }

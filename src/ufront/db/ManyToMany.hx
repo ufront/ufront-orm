@@ -19,7 +19,7 @@ using Lambda;
 // Note 2:
 // On the server side, this class does all the expected database interactions.  On the client side
 // it really does little more than keep a list of <B> objects.  When we send the ManyToMany object
-// back to the server, it should then read the list, and sync it all up.
+// back to the server, the list will be sent back in-tact, so we can manipulate it, save it to the DB etc.
 
 class ManyToMany<A:Object, B:Object>
 {
@@ -113,22 +113,13 @@ class ManyToMany<A:Object, B:Object>
 			if (aObject != null)
 			{
 				var id = aObject.id;
+				var bTableName = bManager.table_name;
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
 
-				// var relationships = manager.search($a == id);
-				var relationships = manager.unsafeObjects("SELECT * FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(id), false);
-				if (relationships.length > 0)
-				{
-					bListIDs = relationships.map(function (r:Relationship) { return Reflect.field(r, bColumn); });
-
-					// Search B table for our list of IDs.
-					// bList = bManager.search($id in bListIDs);
-					bList = bManager.unsafeObjects("SELECT * FROM `" + bManager.table_name + "` WHERE " + Manager.quoteList("id", bListIDs), false);
-				}
+				bList = bManager.unsafeObjects('SELECT `$bTableName`.* FROM `$tableName` JOIN `${bManager.table_name}` ON $tableName.$bColumn=$bTableName.id WHERE $tableName.$aColumn=${Manager.quoteAny(id)} ORDER BY $tableName.modified ASC', false);
+				bListIDs = bList.map(function (b:B) return b.id);
 			}
-			if (bList == null) bList = new List();
-			if (bListIDs == null) bListIDs = new List();
 		}
 	#end
 
@@ -226,9 +217,12 @@ class ManyToMany<A:Object, B:Object>
 
 	#if server
 		/**
-		* A function to at once retrieve the related IDs of several objects.
-		*
-		*/
+			A function to at once retrieve the related IDs of several objects.
+			@param aModel The model for the object IDs you have
+			@param bModel The model the the related object IDs you want to fetch
+			@param aObjectIDs The specific models you want to get.  If not supplied, we'll get a map of ALL manyToMany relationships between these two models.
+			@return An IntMap, where the key is aObjectID, and the value is a list of related bObjectIDs
+		**/
 		public static function relatedIDsforObjects(aModel:Class<Object>, bModel:Class<Object>, ?aObjectIDs:Iterable<SUId>):IntMap<List<Int>>
 		{
 			// Set up
@@ -242,7 +236,7 @@ class ManyToMany<A:Object, B:Object>
 			if (aObjectIDs == null)
 				relationships = manager.all();
 			else
-				relationships = manager.unsafeObjects("SELECT * FROM `" + tableName + "` WHERE " + Manager.quoteList(aColumn, aObjectIDs), false);
+				relationships = manager.unsafeObjects("SELECT * FROM `" + tableName + "` WHERE " + Manager.quoteList(aColumn, aObjectIDs) + " ORDER BY modified ASC", false);
 
 			// Put them into an Intmap
 			var intMap = new IntMap<List<Int>>();
@@ -254,7 +248,7 @@ class ManyToMany<A:Object, B:Object>
 				var list = intMap.get(aID);
 				if (list == null) intMap.set(aID, list = new List());
 
-				list.push(bID);
+				list.add(bID);
 			}
 
 			return intMap;

@@ -678,7 +678,12 @@ class DBMacros
 						#if ufront_clientds
 							var p = $bModelIdent.clientDS.getMany(Lambda.array($ident.bListIDs));
 							p.then(function (items) {
-								for (i in items) $ident.bList.push(i);
+								for (id in $ident.bListIDs) {
+									var item = items.get( id );
+									if ( item!=null ) {
+										$ident.bList.add( item );
+									}
+								}
 							});
 							if (allRelationPromises!=null) allRelationPromises.push( p );
 						#end
