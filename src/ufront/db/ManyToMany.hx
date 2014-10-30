@@ -2,6 +2,7 @@ package ufront.db;
 
 #if server
 	import sys.db.Manager;
+	import sys.db.TableCreate;
 #end
 import sys.db.Types;
 import ufront.db.Object;
@@ -105,6 +106,16 @@ class ManyToMany<A:Object, B:Object>
 			// Join the names - eg join_SchoolClass_Student
 			arr.unshift("_join");
 			return arr.join('_');
+		}
+		
+		/**
+			A function to create a join table for two classes.
+		**/
+		public static function createJoinTable( aModel:Class<Object>, bModel:Class<Object> ) {
+			var tableName = generateTableName( aModel, bModel );
+			var manager = getManager( tableName );
+			if ( TableCreate.exists(Relationship.manager)==false )
+				TableCreate.create( Relationship.manager );
 		}
 
 		@:access(sys.db.Manager)
