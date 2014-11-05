@@ -77,7 +77,8 @@ class ManyToMany<A:Object, B:Object>
 					Relationship.manager;
 				#end
 				m = new Manager(Relationship);
-				m.table_name = tableName;
+				m.table_infos.name = tableName;
+				m.table_name = m.quoteField(tableName);
 				managers.set(tableName, m);
 			}
 			return m;
@@ -118,18 +119,23 @@ class ManyToMany<A:Object, B:Object>
 				TableCreate.create( Relationship.manager );
 		}
 
+		/**
+			Fetch the related objects from the database.
+			If `aObject` does not have an ID, then it will just have an empty list for now.
+		**/
 		@:access(sys.db.Manager)
-		public function refreshList()
-		{
-			if (aObject != null)
-			{
+		public function refreshList() {
+			if ( aObject.id!=null ) {
 				var id = aObject.id;
-				var bTableName = bManager.table_name;
+				var bTableName = bManager.table_name; // Already has quotes.
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
-
-				bList = bManager.unsafeObjects('SELECT `$bTableName`.* FROM `$tableName` JOIN `${bManager.table_name}` ON $tableName.$bColumn=$bTableName.id WHERE $tableName.$aColumn=${Manager.quoteAny(id)} ORDER BY $tableName.modified ASC', false);
+				bList = bManager.unsafeObjects('SELECT $bTableName.* FROM `$tableName` JOIN $bTableName ON `$tableName`.$bColumn=$bTableName.id WHERE `$tableName`.$aColumn=${Manager.quoteAny(id)} ORDER BY $tableName.modified ASC', false);
 				bListIDs = bList.map(function (b:B) return b.id);
+			}
+			else {
+				bList = new List();
+				bListIDs = new List();
 			}
 		}
 	#end
