@@ -12,35 +12,49 @@ using StringTools;
 using Lambda;
 using tink.core.Outcome;
 
-/** Extended Database Object
+/** 
 
-Builds on sys.db.Object, but adds: a default unique ID (unsigned Int), as well as created and modified timestamps.
+Ufront DB Objects
 
-Also has methods to keep the timestamps up to date, and a generic "save" method when you're not sure if you need to insert or update.
+This is the base class for models in Ufront's "Model, View, Controller" pattern.
 
-This class also uses conditional compilation so that the objects can exist on non-server targets that have no
-access to sys.db.*, on these platforms the objects can be created and shared with remoting, and will be able to
-save and fetch records through ClientDS.
+Each model extends `ufront.db.Object`, and uses simple fields to describe what kind of data each of these objects will contain, and how that is saved to the database.
+The type of each variable matches the type used in the database.
 
-We tell if it's a server platform by seeing checking for the `#if server` condition, so be sure to include `-D server` in your server hxml files.
+On the server, this class extends `sys.db.Object` and adds:
 
-Two build macros will be applied to all objects that extends this class:
+- a default unique `this.id` field (`SUId`, unsigned auto-incrementing integer)
+- a `this.created` timestamp (`SDateTime`)
+- a `this.modified` timestamps (`SDateTime`)
+- modified `this.insert()` and `this.update()` methods that check validation and updates `this.created` and `this.modified` timestamps
+- a `this.save()` method that performs either `this.insert()` or `this.update()`
+- a `this.validate()` method that checks if the object is valid. This method is filled out with validation rules by a build macro.
+- a `this.validationErrors` property to check which errors were found in validation.
+- macro powered `this.hxSerialize()` and `this.hxUnserialize()` methods to ensure these objects serialize and unserialize nicely.
+- a default `this.toString()` method that provides "${modelName}#${id}" eg "Person#23"
 
- * The first, is used to detects HasMany<T>, BelongsTo<T> and ManyToMany<A,B> types and
-sets them up as properties so they are handled correctly.
- * The second adds a "manager:sys.db.Manager" property on the server, or a "clientDS:clientds.ClientDs" property on the
- client, and initialises them.
+On the client, this *does not* longer extends `sys.db.Object`, so you can interact with your models even on targets that don't have access to the `sys.db` APIs - for example, Javascript in the browser.
 
-Validation
+This means that:
 
-override validate()
+- Client side code can create, edit, and validate the objects.
+- You can send objects back and forward using Haxe remoting, for example saving an object to the server, or retrieving a list from the server.
+- When you unpack the object on the client it is fully typed, and you get full code re-use between client and server.
+- They just can't save them back to the database, because you can't connect to (for example) MySQL directly.
+- There is the experimental `ClientDS` library which allows you to save back to the server asynchronously using a remoting API.
 
-Security
+You should use `-D server` or `-D client` defines in your hxml build file to help ufront know whether we're compiling for the server or client.
 
-override checkAuthRead()
-override checkAuthWrite()
+Build macro effects:
 
-*/
+- Process `BelongsTo<T>`, `HasMany<T>`, `HasOne<T>` and `ManyToMany<A,B>` relationships and create the appropriate getters and setters.
+- Add the appropriate validation checks to our `this.validate()` method.
+- Save appropriate metadata for being able to serialize and unserialize correctly.
+- On the server, create a `public static var manager:Manager<T> = new Manager(T)` property for each class.
+- On the client, if using ClientDS, create a `public static var clientDS:ClientDS<T>` property for each class.
+
+**/
+
 #if server
 	@noTable
 #else
@@ -48,10 +62,15 @@ override checkAuthWrite()
 #end
 
 #if !macro @:autoBuild(ufront.db.DBMacros.setupDBObject()) #end
-class Object #if server extends sys.db.Object #end
-{
-	public var id:SUId;
+class Object #if server extends sys.db.Object #end {
+	
+	/** A default ID. Auto-incrementing 32-bit Int. **/
+	public var id:SId;
+	
+	/** The time this record was first created. **/
 	public var created:SDateTime;
+	
+	/** The time this record was last modified. **/
 	public var modified:SDateTime;
 
 	#if server
@@ -61,18 +80,18 @@ class Object #if server extends sys.db.Object #end
 			super();
 		}
 
-		/** Updates the "created" and "modified" timestamps, and then saves to the database if checkAuthWrite() and validate() both pass. */
+		/**
+			Inserts a new record to the database.
+			Will throw an error if `this.validate()` fails.
+			Updates the "created" and "modified" timestamps before saving.
+		**/
 		override public function insert()
 		{
 			if (this.validate())
 			{
-				if (this.checkAuthWrite())
-				{
-					this.created = Date.now();
-					this.modified = Date.now();
-					super.insert();
-				}
-				else throw 'You do not have permission to save object $this';
+				this.created = Date.now();
+				this.modified = Date.now();
+				super.insert();
 			}
 			else {
 				var errors = Lambda.array(validationErrors).join("\n");
@@ -80,17 +99,17 @@ class Object #if server extends sys.db.Object #end
 			}
 		}
 
-		/** Updates the "modified" timestamp, and then saves to the database if checkAuthWrite() and validate() both pass. */
+		/**
+			Updates an existing record in the database.
+			Will throw an error if `this.validate()` fails.
+			Updates the "modified" timestamp before saving.
+		**/
 		override public function update()
 		{
 			if (this.validate())
 			{
-				if (this.checkAuthWrite())
-				{
-					this.modified = Date.now();
-					super.update();
-				}
-				else throw 'You do not have permission to save object $this';
+				this.modified = Date.now();
+				super.update();
 			}
 			else {
 				var errors = Lambda.array(validationErrors).join(", ");
@@ -98,10 +117,13 @@ class Object #if server extends sys.db.Object #end
 			}
 		}
 
-		/** Either updates or inserts the given record into the database, updating timestamps as necessary.
-
-		If `id` is null, then it needs to be inserted.  If `id` already exists, try to update first.  If that
-		throws an error, it means that it is not inserted yet, so then insert it. */
+		/**
+			Save a record (either inserting or updating) to the database.
+			If `id` is null, then it needs to be inserted.
+			If `id` already exists, try to update first.
+			If that throws an error, it means that it is not inserted yet, so then insert it.
+			Updates the "created" and "modified" timestamps as required.
+		**/
 		public function save()
 		{
 			if (id == null)
@@ -247,13 +269,6 @@ class Object #if server extends sys.db.Object #end
 		return validationErrors.isValid;
 	}
 
-	/** A function to check if the current user is allowed to read this object.  This always returns true, you should override it to be more useful */
-	public function checkAuthRead():Bool { return true; }
-
-	/** A function to check if the current user is allowed to save this object.  This always returns true, you should override it to be more useful */
-	public function checkAuthWrite():Bool { return true; }
-
-
 	/** An example hxSerializeFields array used for custom serializaton.  Each model should have it's own static field for this, generated by the build macro. */
 	static var hxSerializeFields = ["id","created","modified"];
 
@@ -342,50 +357,66 @@ class Object #if server extends sys.db.Object #end
 	}
 }
 
-/** BelongsTo relation
+/**
+BelongsTo relationship.
 
-You can use this as if the field is just typed as whatever T is, but the build macro here will set it up as a property and will link to the related object correctly.
+Use this whenever the current object belongs to just one instance of another object.
+For example a BlogPost might belong to an Author, and an Invoice might belong to a Customer.
 
-T must be a type that extends ufront.db.Object  */
+The build macro will transform this into a property to fetch the related object from the database.
+You use it directly.
+
+```haxe
+class BlogPost extends Object {
+	public var author:BelongsTo<Author>;
+}
+
+function() {
+	var blogPost = BlogPost.get(1);
+	blogPost.author.name; // Will fetch the related "Author" object, cache it, and get the name.
+	blogPost.author.email; // Will use the cached related "Author" object, and get the email.
+}
+```
+
+T must be a type that extends ufront.db.Object.
+**/
 typedef BelongsTo<T> = T;
 
-/** HasMany relation
+/**
+HasMany relationship.
 
-This type is transformed into an Iterable that lets you iterate over related objects.
+This type is transformed into an List that lets you iterate over related objects.
 Related objects are determined by a corresponding "BelongsTo<T>" in the related class.
 
 Please note that at this time setting or modifying the list has no effect on the database.
-To update the relations in the database you must update the related property on each related object.
+To update the relations in the database you must update the related `BelongsTo` property on each related object.
 
-T must be a type that extends `ufront.db.Object` */
+```haxe
+class Author extends Object {
+	public var posts:HasMany<BlogPost>;
+}
+function() {
+	var author = Author.manager.get(1);
+	author.posts.length; // Will fetch the `List` of related BlogPost objects, cache it, and get the length of the list.
+	author.posts.first(); // Will use the cached `List` of related BlogPost objects, and fetch the first post.
+
+	var newBlogPost = new BlogPost();
+	newBlogPost.author = author;
+	newBlogPost.save();
+}
+```
+
+T must be a type that extends `ufront.db.Object`
+**/
 typedef HasMany<T> = List<T>
 
-/** HasOne relation
+/**
+HasOne relationship.
 
-This type is transformed into a property that lets you fetch a single related object.
-Related objects are determined by a corresponding "BelongsTo<T>" in the related class.
+This behaves the same as `HasMany`, but only fetches the first related object, not a list of all relationships.
 
-Setting the property has no effect on the database.
-To update a HasOne relationship in the database, you must update the BelongsTo<> property on the related object.
+Similar to `HasMany`, you must update relationships by changing the `BelongsTo` property on the related object.
 
-T must be a type that extends `ufront.db.Object` */
+T must be a type that extends `ufront.db.Object`
+**/
 typedef HasOne<T> = Null<T>;
-
-/** A simple wrapper of `List<T>` that exposes only the read operations, it does not allow modifying the list. */
-abstract ReadOnlyList<T>(List<T>) from List<T> {
-
-    public var length(get, never):Int;
-
-    inline function get_length() return this.length;
-
-    public inline function first() return this.first();
-    public inline function isEmpty() return this.isEmpty();
-    public inline function join(sep) return this.join(sep);
-    public inline function last() return this.last();
-    public inline function iterator() return this.iterator();
-    public inline function filter(predicate) return this.filter(predicate);
-    public inline function map(fn) return this.map(fn);
-    public inline function toString() return this.toString();
-
-    @:to inline function toArray():Array<T> return Lambda.array(this);
-}
