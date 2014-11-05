@@ -63,7 +63,7 @@ class TestValidation extends DBTestClass {
 		person1.email = "not an email address";
 		Assert.isFalse( person1.validate() );
 		Assert.equals( 1, person1.validationErrors.length );
-		Assert.equals( "email failed validation.", person1.validationErrors["email"][0] );
+		Assert.equals( "email failed validation.", person1.validationErrors.errors("email")[0] );
 		
 	}
 	

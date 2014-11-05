@@ -7,15 +7,20 @@ import sys.db.*;
 class TestAll
 {
 	static function main(){
+		var cnx = switch Sys.args()[0] {
+			case "sqlite": Sqlite.open("test.db3");
+			case "mysql": Mysql.connect({
+				host: "localhost",
+				user: "ufrontormtest",
+				pass: "ufrontormtest",
+				database: "ufrontormtest",
+			});
+			default: throw "Please specify which db connection (sqlite/mysql) you wish to test with";
+		}
 		var runner = new Runner();
-		addSQLiteTests( runner );
+		addTests( runner, cnx );
 		Report.create(runner);
 		runner.run();
-	}
-
-	static function addSQLiteTests( runner:Runner ) {
-		var cnx = Sqlite.open("test.db3");
-		addTests( runner, cnx );
 	}
 	
 	public static function addTests( runner:Runner, cnx:Connection ) {
