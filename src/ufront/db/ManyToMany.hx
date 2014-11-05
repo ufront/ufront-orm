@@ -70,11 +70,11 @@ class ManyToMany<A:Object, B:Object>
 			{
 				m = managers.get(tableName);
 			}
-			else
-			{
+			else {
+				// PHP requires us to explicitly call Relationship.manager for the metadata to be included in compilation.
+				// We don't have to (or want to) do anything with it, just make sure the metadata is attached to the Relationship object.
 				#if php
-					// haxe.rtti.Meta.getType(Relationship);
-					// throw "Up to this point";
+					Relationship.manager;
 				#end
 				m = new Manager(Relationship);
 				m.table_name = tableName;
