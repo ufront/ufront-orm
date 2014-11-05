@@ -2,7 +2,9 @@ package ufront.db;
 
 import sys.db.Types;
 import haxe.ds.StringMap;
-#if ufront_clientds
+#if server
+	import sys.db.Manager;
+#elseif ufront_clientds
 	import clientds.Promise;
 #end
 
@@ -123,6 +125,26 @@ class Object #if server extends sys.db.Object #end
 				}
 			}
 		}
+		
+		/**
+			Refresh the relations on this object.
+			Currently this does not refresh the object itself, it merely empties the cached related objects so they will be fetched again.
+			In future we might get this to refresh the object itself from the database.
+		**/
+		public function refresh() {
+			var relArr:Array<String> = untyped Type.getClass(this).hxRelationships;
+			for (relDetails in relArr) {
+				var fieldName = relDetails.split(",")[0];
+				Reflect.setField( this, '_$fieldName', null );
+			}
+		}
+		
+		/**
+			Even though it's non-sensical to have a manager on `ufront.db.Object`, the Haxe record macros (not the ufront ones) add a `__getManager` field if we don't have one (platforms other than neko.)
+			This breaks things when you have an inheritance chain, where `ufront.db.Object` doesn't have a manager, but it's children do.
+			As a workaround I'm putting this private static manager here.
+		**/
+		private static var manager:Manager<Object> = new Manager(Object);
 	#else
 
 		#if ufront_clientds
