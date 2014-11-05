@@ -263,7 +263,6 @@ class DBMacros
 				var s = currentClass.superClass.t.get();
 				for (f in s.fields.get())
 				{
-					// trace (f.type);
 					var className = getRelatedModelTypeFromField(f);
 					var foreignKey = getRelationKeyForField(f);
 
@@ -457,6 +456,7 @@ class DBMacros
 				setterBody = macro {
 					$privateIdent = v;
 					if (v == null) throw '${modelType.name} cannot be null';
+					if (v.id == null) throw '${modelType.name} must be saved before you can set ${f.name}';
 					$idIdent = v.id;
 					return $privateIdent;
 				}
