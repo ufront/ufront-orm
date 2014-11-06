@@ -1,5 +1,6 @@
 package ufront.db;
 import haxe.macro.Context;
+import haxe.macro.Compiler;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import sys.db.RecordMacros;
@@ -18,6 +19,10 @@ class DBMacros
 		fields = addManager(fields);
 		fields = addValidation(fields);
 		fields = addHxSerializeFieldsArray(fields);
+		
+		// DCE can sometimes cause Bytes.toString() to not be compiled, which causes issues when working with SData.  
+		// This is a workaround.
+		Compiler.addMetadata( ":keep", "haxe.io.Bytes", "toString", false );
 
 		return fields;
 	}
