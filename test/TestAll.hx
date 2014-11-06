@@ -2,6 +2,7 @@ import utest.Assert;
 import utest.Runner;
 import utest.ui.Report;
 import testcases.*;
+import testcases.issues.*;
 import sys.db.*;
 
 class TestAll
@@ -29,5 +30,7 @@ class TestAll
 		runner.addCase( new TestSerialization(cnx) );
 		runner.addCase( new TestValidation(cnx) );
 		runner.addCase( new TestManyToMany(cnx) );
+		
+		runner.addCase( new Issue001(cnx) );
 	}
 }
