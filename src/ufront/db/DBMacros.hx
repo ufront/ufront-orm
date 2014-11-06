@@ -23,7 +23,6 @@ class DBMacros
 		// DCE can sometimes cause Bytes.toString() to not be compiled, which causes issues when working with SData.  
 		// This is a workaround.
 		Compiler.addMetadata( "@:keep", "haxe.io.Bytes", "toString", false );
-
 		return fields;
 	}
 
