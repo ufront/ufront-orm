@@ -318,34 +318,6 @@ class ManyToMany<A:Object, B:Object> {
 		}
 	}
 
-	/**
-		Remove (and return) the first related object.
-		If there were no related objects, there will be no effect and `null` will be returned.
-		If aObject or the relevant bObject don't have an ID, then the object is still removed, but no database query will be executed.
-	**/
-	public function pop():B {
-		var bObject = bList.pop();
-		if (bObject!=null) {
-			#if server
-				if ( aObject.id!=null || bObject.id!=null ) {
-					var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
-					var bColumn = (isABeforeB(a,b)) ? "r2" : "r1";
-					// manager.delete($a == aObject.id && $b == bObject.id);
-					manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id) + " AND " + bColumn + " = " + Manager.quoteAny(bObject.id));
-				}
-			#end
-		}
-		return bObject;
-	}
-
-	/**
-		Add a relationship between our `aObject` and `bObject`.
-		This is identical to `thisadd()`.
-	**/
-	public function push(bObject:B) {
-		add(bObject);
-	}
-
 	//
 	// Private
 	//
