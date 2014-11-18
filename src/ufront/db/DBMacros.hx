@@ -114,13 +114,10 @@ class DBMacros
 
 		static public function addValidation(fields:Array<Field>):Array<Field>
 		{
-			// Create a validation function if it doesn't exist
-			var validateFunction = fields.filter(function (f) return f.name == "validate")[0];
-			if (validateFunction == null)
-			{
-				validateFunction = createEmptyValidateFunction();
-				fields.push(validateFunction);
-			}
+			// Get rid of any existing validation function left from a previous compilation.
+			fields = fields.filter(function (f) return f.name != "_validationsFromMacros");
+			var validateFunction = createEmptyValidateFunction();
+			fields.push( validateFunction );
 
 			// Loop all fields,
 			var ignoreList = ["new", "validate", "id", "created", "modified"];
@@ -190,13 +187,28 @@ class DBMacros
 							Context.warning(Std.string(e), meta.pos);
 						}
 
+						var alreadyAdded:Bool;
 						if (validateFieldFn == null)
 						{
 							validateFieldFn = createEmptyFieldValidateFunction(validateFieldName);
 							fields.push(validateFieldFn);
 							validateFnNames.push(validateFieldName);
+							alreadyAdded = false;
 						}
-						BuildTools.addLinesToFunction(validateFieldFn, check, 0);
+						else
+						{
+							// The field can pre-exist for two reasons:
+							// There are multiple @:validate metadata, and this is not the first.
+							// There is @:validate metadata AND a validate_$field() function.
+							// If it's the latter, and we're using the compilation server, there's a chance we already added this line.
+//							var metaID = ':${p.file}_${p.min}_${p.max}';
+//							alreadyAdded = f.meta.exists(function(m) return m.name==metaID);
+//							if ( !alreadyAdded )
+//								f.meta.push({ name:metaID, params:[], pos:meta.pos });
+							// Unfortunately... I can't figure out the best way to solve this problem.
+						}
+						if ( !alreadyAdded )
+							BuildTools.addLinesToFunction(validateFieldFn, check, 0);
 					}
 				}
 			}
@@ -854,13 +866,10 @@ class DBMacros
 		static function createEmptyValidateFunction():Field
 		{
 			var ct = macro : {
-				override public function validate():Bool
+				override function _validationsFromMacros()
 				{
 					// Do super class validation also.
-					super.validate();
-
-					// If there are no errors, then return true
-					return validationErrors.isValid;
+					super._validationsFromMacros();
 				}
 			}
 
@@ -874,6 +883,7 @@ class DBMacros
 			}
 			var f = BuildTools.fieldsFromAnonymousType(ct)[0];
 			f.name = validateFnName;
+			f.meta = [];
 			return f;
 		}
 

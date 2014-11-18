@@ -257,15 +257,19 @@ class Object #if server extends sys.db.Object #end {
 	throws an error or returns false, then validation will fail.
 
 	If you override this method to add more custom validation, then we recommend starting with `super.validate()` and
-	ending with `return (!validationErrors.isValid);`
+	ending with `return validationErrors.isValid;`
 	*/
 	public function validate():Bool {
 		if ( validationErrors==null )  validationErrors = new ValidationErrors();
 		else validationErrors.reset();
-
+		
+		_validationsFromMacros();
+		
 		return validationErrors.isValid;
 	}
-
+	
+	/** The build macro will save override this method and populate it with validation statements. **/
+	function _validationsFromMacros() {}
 	
 	function get_saved():Signal<Noise> {
 		if ( saved==null ) {
