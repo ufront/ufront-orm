@@ -670,6 +670,7 @@ class DBMacros
 			{
 				getterBody = macro {
 					if ($ident == null) $ident = new ManyToMany(this, $bModelIdent);
+					if ($ident.bList == null) $ident.compileBList();
 					return $ident;
 				};
 			}

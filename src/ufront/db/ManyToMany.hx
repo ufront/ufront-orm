@@ -9,6 +9,7 @@ import ufront.db.Object;
 import ufront.db.Relationship;
 import haxe.ds.*;
 using Lambda;
+using tink.CoreApi;
 
 // Note:
 // Throughout this class, I've had to replace SPOD macro calls with the "unsafe" runtime calls.
@@ -245,6 +246,24 @@ class ManyToMany<A:Object, B:Object> {
 		}
 	#end
 
+		/**
+			This private function is used when a ManyToMany getter is accessed, and it has a null bList, but it has bListIDs and/or unsavedBObjects.
+			This happens for instance if the object was serialized and unserialized (via remoting for example).
+			This will perform a query to load the bList given the current IDs.
+		**/
+		function compileBList() {
+			var bTableName = @:privateAccess bManager.table_name; // Already has quotes.
+			if ( bListIDs!=null )
+				// bList = bManager.search( $id in bListIDs );
+				bList = bManager.unsafeObjects( 'SELECT * FROM $bTableName WHERE '+Manager.quoteList('id',bListIDs), false );
+			else
+				bList = new List();
+			
+			for ( newObj in unsavedBObjects ) {
+				this.bList.add( newObj );
+			}
+		}
+	#end
 
 	/**
 		Add a related object by creating a new Relationship on the appropriate join table.
