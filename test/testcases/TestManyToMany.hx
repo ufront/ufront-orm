@@ -163,11 +163,32 @@ class TestManyToMany extends DBTestClass {
 		post1.tags.add(tag1);
 		tag2.posts.add(post2);
 		
-		Assert.notNull( post1.id );
-		Assert.notNull( post2.id );
-		Assert.notNull( tag1.id );
-		Assert.notNull( tag2.id );
+		// The ManyToMany lists should be updated, but not committed to the database, because the objects aren't saved yet.
+		// So after we refresh, they'll be gone.
+		Assert.equals( 1, post1.tags.length );
+		Assert.equals( 1, tag2.posts.length );
+		reloadJoins();
+		Assert.equals( 0, post1.tags.length );
+		Assert.equals( 0, tag2.posts.length );
 		
+		post1.tags.add(tag1);
+		tag2.posts.add(post2);
+		post1.save();
+		post2.save();
+		
+		// Same as before - posts are saved, but tags are not, so still not committed.
+		Assert.equals( 1, post1.tags.length );
+		Assert.equals( 1, tag2.posts.length );
+		reloadJoins();
+		Assert.equals( 0, post1.tags.length );
+		Assert.equals( 0, tag2.posts.length );
+		
+		// Let's try again, but this time we'll save the tags too, and it should all commit.
+		post1.tags.add(tag1);
+		tag2.posts.add(post2);
+		tag1.save();
+		tag2.save();
+		reloadJoins();
 		Assert.equals( 1, post1.tags.length );
 		Assert.equals( 1, post2.tags.length );
 		Assert.equals( 1, tag1.posts.length );

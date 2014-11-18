@@ -295,6 +295,7 @@ class Object #if server extends sys.db.Object #end {
 				if (m2m!=null) {
 					s.serialize(Type.getClassName(m2m.b));
 					s.serialize(m2m.bListIDs);
+					s.serialize(m2m.unsavedBObjects);
 				}
 				else {
 					// Figure out the type by looking at hxRelationships
@@ -331,6 +332,7 @@ class Object #if server extends sys.db.Object #end {
 			else if (f.startsWith("ManyToMany")) {
 				var bName = s.unserialize();
 				var bListIDs = s.unserialize();
+				var unsavedBObjects = s.unserialize();
 
 				if (bName != null) {
 					var b = Type.resolveClass(bName);
@@ -338,6 +340,7 @@ class Object #if server extends sys.db.Object #end {
 
 					var m2m = new ManyToMany(this, b);
 					m2m.bListIDs = bListIDs;
+					m2m.unsavedBObjects = unsavedBObjects;
 					m2m.bList = null;
 					Reflect.setField(this, "_"+f.substr(10), m2m);
 				}

@@ -92,6 +92,7 @@ class ManyToMany<A:Object, B:Object> {
 	var aObject:A;
 	var bList:List<B>;
 	var bListIDs:List<Int>;
+	var unsavedBObjects:Null<List<B>>;
 
 	/** The number of related objects. **/
 	public var length(get,null):Int;
@@ -121,7 +122,18 @@ class ManyToMany<A:Object, B:Object> {
 			bManager = untyped b.manager;
 			this.tableName = generateTableName(a,b);
 			this.manager = getManager(tableName);
-			if (initialise) refreshList();
+			this.unsavedBObjects = new List();
+			if (initialise) {
+				refreshList();
+			}
+			else {
+				this.bList = new List();
+				this.bListIDs = new List();
+			} 
+		#else
+			this.bList = new List();
+			this.bListIDs = new List();
+			this.unsavedBObjects = new List();
 		#end
 	}
 
@@ -228,9 +240,11 @@ class ManyToMany<A:Object, B:Object> {
 		/**
 			Fetch the related objects from the database.
 			If `aObject` does not have an ID, then it will just have an empty list for now.
+			Any outstanding operations (`add` or `remove` operations that have not yet been committed to the database) will be lost.
 		**/
 		@:access(sys.db.Manager)
 		public function refreshList() {
+			unsavedBObjects.clear();
 			if ( aObject.id!=null ) {
 				var id = aObject.id;
 				var bTableName = bManager.table_name; // Already has quotes.
@@ -244,7 +258,6 @@ class ManyToMany<A:Object, B:Object> {
 				bListIDs = new List();
 			}
 		}
-	#end
 
 		/**
 			This private function is used when a ManyToMany getter is accessed, and it has a null bList, but it has bListIDs and/or unsavedBObjects.
@@ -263,24 +276,50 @@ class ManyToMany<A:Object, B:Object> {
 				this.bList.add( newObj );
 			}
 		}
+		
+		/**
+			Resolves any differences between the joins represented here and the joins in the database.
+			Most actions (`add`, `remove`, `setList` etc) apply to the database immediately if a) we're on the server and b) both objects have an ID.
+			If one of the joint objects is unsaved, or if we're on the client, then we might have a situation where our list here is out of sync with our list on the server.
+			Calling this will add or remove joins from the database to match our current state.
+			Please note if some of your objects are *still* unsaved, they will still remain unsaved.
+		**/
+		public function commitJoins() {
+			setList( bList.list() );
+			unsavedBObjects.clear();
+		}
 	#end
 
 	/**
 		Add a related object by creating a new Relationship on the appropriate join table.
-		If either aObject or bObject have no ID, `insert()` will be called, saving them to the database before continuing.
+		If either aObject or bObject have no ID, we will add them to our local list, and they will be updated when saving.
 		If the object already has a relationship in the join table, it will be ignored.
 	**/
-	@:access( sys.db.Manager )
+	@:access( sys.db )
 	public function add(bObject:B) {
 		if (bObject!=null && bList.has(bObject)==false) {
 			bList.add(bObject);
-			#if server
-				if (aObject.id == null) aObject.insert();
-				if (bObject.id == null) bObject.insert();
-				var r = if (isABeforeB(a,b)) new Relationship(aObject.id, bObject.id);
-						else                 new Relationship(bObject.id, aObject.id);
-				getManager(tableName).doInsert(r);
-			#end
+			var server = #if server true #else false #end;
+			if (server && aObject.id!=null && bObject.id!=null) {
+				#if server
+					var r = if (isABeforeB(a,b)) new Relationship(aObject.id, bObject.id);
+							else                 new Relationship(bObject.id, aObject.id);
+					getManager(tableName).doInsert(r);
+					unsavedBObjects.remove(bObject);
+				#end
+			}
+			else {
+				function reAdd() {
+					if ( unsavedBObjects.has(bObject) ) {
+						bList.remove( bObject );
+						add( bObject );
+					}
+				}
+				aObject.saved.handle( reAdd );
+				bObject.saved.handle( reAdd );
+				if ( unsavedBObjects.has(bObject)==false )
+					unsavedBObjects.add( bObject );
+			}
 		}
 	}
 
@@ -300,6 +339,9 @@ class ManyToMany<A:Object, B:Object> {
 					// manager.delete($a == aObject.id && $b == bObject.id);
 					manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id) + " AND " + bColumn + " = " + Manager.quoteAny(bObject.id));
 				}
+				else {
+					// Because one of the IDs was null, the joins were never saved, so we don't have to clear them.
+				}
 			#end
 		}
 	}
@@ -310,11 +352,15 @@ class ManyToMany<A:Object, B:Object> {
 	**/
 	public function clear() {
 		bList.clear();
+		unsavedBObjects.clear();
 		#if server
 			if ( aObject.id!=null ) {
 				var aColumn = (isABeforeB(a,b)) ? "r1" : "r2";
 				// manager.delete($a == aObject.id);
 				manager.unsafeDelete("DELETE FROM `" + tableName + "` WHERE " + aColumn + " = " + Manager.quoteAny(aObject.id));
+			}
+			else {
+				// Because aObject was never saved, the joins were never saved, so we don't have to clear them.
 			}
 		#end
 	}
