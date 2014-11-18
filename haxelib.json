@@ -5,8 +5,18 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, permission checking and client-side safety.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Preserve order of ManyToMany joins when retrieving. Add ManyToMany.createJoinTable(aModel,bModel)",
-  "version": "1.0.0-rc.4",
+  "releasenote": "Added unit tests and many bug fixes. 
+Add `saved` signal to ufront.db.Object.
+Better handling of unsaved objects in relationships / joins.
+Work-in-progress at fixing multiple validation errors when using the compiler cache
+Better handling of serialization.
+Fix for ManyToMany.createJoinTable().
+Get rid of `pop` and `push`, they're not useful enough to justify the extra complications
+Workaround for PHP metadata not attaching correctly.
+Fix for quoting on ManyToMany SQL query.
+Add `Object.refresh()` and fix PHP glitch with latest Haxe.
+Consult git history for more details.",
+  "version": "1.0.0-rc.5",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": "1.0.0-rc.7",
