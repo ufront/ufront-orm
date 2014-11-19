@@ -193,9 +193,9 @@ class Object #if server extends sys.db.Object #end {
 				setupClientDs();
 				if (validate()) {
 					var promise = _clientDS.save(this);
-					promise.then(function() {
-						if ( signalTrigger!=null )
-							signalTrigger.trigger( Noise );
+					promise.then(function(_) {
+						if ( savedTrigger!=null )
+							savedTrigger.trigger( Noise );
 					});
 					return promise;
 				}
