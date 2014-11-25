@@ -5,7 +5,7 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, permission checking and client-side safety.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Fix typo on client side code",
+  "releasenote": "Fix typo on client side code, fix ManyToMany serialization.",
   "version": "1.0.0-rc.6",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
