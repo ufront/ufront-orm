@@ -316,6 +316,7 @@ class Object #if server extends sys.db.Object #end {
 
 					s.serialize(typeName);
 					s.serialize(null);
+					s.serialize(null);
 				}
 			}
 			else {
@@ -341,6 +342,7 @@ class Object #if server extends sys.db.Object #end {
 				if (bName != null) {
 					var b = Type.resolveClass(bName);
 					if (bListIDs == null) bListIDs = new List();
+					if (unsavedBObjects == null) unsavedBObjects = new List();
 
 					var m2m = new ManyToMany(this, b);
 					m2m.bListIDs = bListIDs;
