@@ -119,7 +119,7 @@ class ManyToMany<A:Object, B:Object> {
 		#if server
 			this.a = Type.getClass(aObject);
 			this.b = bClass;
-			bManager = untyped b.manager;
+			bManager = untyped bClass.manager;
 			this.tableName = generateTableName(a,b);
 			this.manager = getManager(tableName);
 			this.unsavedBObjects = new List();
