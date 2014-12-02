@@ -381,6 +381,7 @@ class DBMacros
 			switch (f.kind) {
 				case FVar(t,e):
 					f.kind = FProp("get","set",t,e);
+					f.meta.push({ name:":isVar", params:null, pos:f.pos });
 				case _: error('On field `${f.name}`: BelongsTo can only be used with a normal var, not a property or a function.', f.pos);
 			};
 
@@ -402,21 +403,10 @@ class DBMacros
 				modelTypeSig = TPath(modelType);
 			}
 
-			// Add the private container field
-
-			fields.push({
-				pos: f.pos,
-				name: "_" + f.name,
-				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
-				kind: FVar(modelTypeSig),
-				doc: null,
-				access: [APrivate]
-			});
-
 			// Add the getter
 
 			var getterBody:Expr;
-			var privateIdent = ("_" + f.name).resolve();
+			var privateIdent = (f.name).resolve();
 			var idIdent = (f.name + "ID").resolve();
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
@@ -517,13 +507,14 @@ class DBMacros
 				case FVar(t,e):
 					fieldType = t;
 					f.kind = FProp("get","set",t,e);
+					f.meta.push({ name:":isVar", params:null, pos:f.pos });
 				case _: error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// Values needed for reification of fields.
 			var modelTypeSig:ComplexType = TPath(modelType);
 			var iterableTypeSig:ComplexType = macro :List<$modelTypeSig>;
-			var privateName = '_${f.name}';
+			var privateName = f.name;
 			var privateIdent = privateName.resolve();
 			var getterName = 'get_${f.name}';
 			var setterName = 'set_${f.name}';
@@ -533,7 +524,6 @@ class DBMacros
 			
 			// Use reification to create the private field, the getter and the setter.
 			var fieldsToAdd = macro class {
-				@:skip private var $privateName:List<$modelTypeSig>;
 				private function $getterName():List<$modelTypeSig> {
 					#if server
 						// if ($privateIdent == null) $privateIdent = $model.manager.search($i{relationKey} == s.id);
@@ -589,11 +579,12 @@ class DBMacros
 			switch (f.kind) {
 				case FVar(t,e):
 					f.kind = FProp("get","set",t,e);
+					f.meta.push({ name:":isVar", params:null, pos:f.pos });
 				case _: error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
 			};
 			
 			// Values needed for reification of fields.
-			var privateName = ("_" + f.name);
+			var privateName = f.name;
 			var privateIdent = privateName.resolve();
 			var getterName = ("get_" + f.name);
 			var setterName = ("set_" + f.name);
@@ -603,7 +594,6 @@ class DBMacros
 			
 			// Use reification to create the private field, the getter and the setter.
 			var fieldsToAdd = macro class {
-				@:skip private var $privateName:$modelTypeSig;
 				private function $getterName():$modelTypeSig {
 					#if server
 						// if ($privateIdent == null) $privateIdent = $model.manager.search($i{relationKey} == s.id);

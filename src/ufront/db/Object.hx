@@ -154,7 +154,7 @@ class Object #if server extends sys.db.Object #end {
 			var relArr:Array<String> = untyped Type.getClass(this).hxRelationships;
 			for (relDetails in relArr) {
 				var fieldName = relDetails.split(",")[0];
-				Reflect.setField( this, '_$fieldName', null );
+				Reflect.setField( this, fieldName, null );
 			}
 		}
 		
