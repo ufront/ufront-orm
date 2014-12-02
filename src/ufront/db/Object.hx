@@ -295,7 +295,7 @@ class Object #if server extends sys.db.Object #end {
 				s.serialize((date!=null) ? date.getTime() : null);
 			}
 			else if (f.startsWith("ManyToMany")) {
-				var m2m:ManyToMany<Dynamic,Dynamic> = Reflect.getProperty(this, "_" + f.substr(10));
+				var m2m:ManyToMany<Dynamic,Dynamic> = Reflect.field(this, f.substr(10));
 				if (m2m!=null) {
 					s.serialize(Type.getClassName(m2m.b));
 					s.serialize(m2m.bListIDs);
@@ -348,7 +348,7 @@ class Object #if server extends sys.db.Object #end {
 					m2m.bListIDs = bListIDs;
 					m2m.unsavedBObjects = unsavedBObjects;
 					m2m.bList = null;
-					Reflect.setField(this, "_"+f.substr(10), m2m);
+					Reflect.setField(this, f.substr(10), m2m);
 				}
 			}
 			else {

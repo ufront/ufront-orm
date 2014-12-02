@@ -284,7 +284,7 @@ class DBMacros
 
 					switch (f)
 					{
-						case { kind: FVar(AccNormal, AccNormal) } if (!f.meta.has(":skip")):
+						case { kind: FVar(AccNormal, AccNormal) } if (!f.meta.has(":skip") && f.name!="__cache__"):
 							// Any database fields are vars
 							serializeFields.push(f.name);
 						case { kind: FVar(AccCall,_), type: TType(t,_) }:
@@ -657,21 +657,9 @@ class DBMacros
 				case _: error('On field `${f.name}`: ManyToMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
 
-			// create var _propertyName (and skip)
-			// Add the private container field
-			// generally _fieldName:T
-			fields.push({
-				pos: f.pos,
-				name: "_" + f.name,
-				meta: [{ name: ":skip", params: [], pos: f.pos }], // Add @:skip metadata to this
-				kind: FVar(fieldType),
-				doc: null,
-				access: [APrivate]
-			});
-
 			// Get the various exprs used in the getter
 
-			var ident = ("_" + f.name).resolve();
+			var ident = (f.name).resolve();
 
 			// create getter
 
