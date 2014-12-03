@@ -253,6 +253,7 @@ class DBMacros
 					function getClassNameOfTypeParam( t:Type ) {
 						return switch t {
 							case TInst(relatedModelClassType,params): relatedModelClassType.toString();
+							case TType(_,_): getClassNameOfTypeParam( Context.follow(t) );
 							case other: throw Context.error('Expected type parameter for field `${f.name}` to be a Class, but was ${other}',f.pos);
 						}
 					}
@@ -264,7 +265,6 @@ class DBMacros
 								serializeFields.push(f.name);
 						case { kind: FVar(AccCall,_), type: TType(t,params) }:
 							// If it's Null<T>, let's work on the <T> bit...
-
 							var defType = t.get();
 							if (defType.name=="Null") defType = switch params[0] {
 								case TType(t,_): t.get();
