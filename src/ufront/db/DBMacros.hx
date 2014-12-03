@@ -272,10 +272,12 @@ class DBMacros
 							}
 
 
-							// All relationships are properties
-							if (defType.name == "BelongsTo") relationFields.push('${f.name},BelongsTo,${getClassNameOfTypeParam(params[0])}');
-							else if (defType.name == "HasOne") relationFields.push('${f.name},HasOne,${getClassNameOfTypeParam(params[0])},$foreignKey');
-							else if (defType.name == "HasMany") relationFields.push('${f.name},HasMany,${getClassNameOfTypeParam(params[0])},$foreignKey');
+							// Handle our BelongsTo, HasOne, HasMany typedefs - they are not serialized but we need to leave information about the type of relationship.
+							if (defType!=null) {
+								if (defType.name == "BelongsTo") relationFields.push('${f.name},BelongsTo,${getClassNameOfTypeParam(params[0])}');
+								else if (defType.name == "HasOne") relationFields.push('${f.name},HasOne,${getClassNameOfTypeParam(params[0])},$foreignKey');
+								else if (defType.name == "HasMany") relationFields.push('${f.name},HasMany,${getClassNameOfTypeParam(params[0])},$foreignKey');
+							}
 						case { kind: FVar(AccCall,_), type: TInst(t,params) }:
 							if ((hasSkip==false || hasInclude) && t.get().name=="ManyToMany")
 							{
