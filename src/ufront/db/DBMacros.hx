@@ -245,45 +245,55 @@ class DBMacros
 			{
 				for (f in currentClass.fields.get())
 				{
-					var foreignKey = getRelationKeyForField(f);
 					var isCache = f.name=="__cache__";
 					var hasSkip = f.meta.has(":skip");
 					var hasInclude = f.meta.has(":includeInSerialization");
 					var thisFieldIsNotSkipped = (hasSkip==false || hasInclude);
-					function getClassNameOfTypeParam( t:Type ) {
-						return switch t {
-							case TInst(relatedModelClassType,params): relatedModelClassType.toString();
-							case TType(_,_): getClassNameOfTypeParam( Context.follow(t) );
-							case other: throw Context.error('Expected type parameter for field `${f.name}` to be a Class, but was ${other}',f.pos);
-						}
-					}
 					
 					switch (f) {
 						case { kind: FVar(AccNormal, AccNormal) }:
 							// Serialize anything that would usually be saved to the database.
 							if ( f.name!="__cache__" && thisFieldIsNotSkipped )
 								serializeFields.push(f.name);
-						case { kind: FVar(AccCall,_), type: TType(t,params) }:
+						case { kind: FVar(AccCall,_), type: fieldType }:
 							// If it's Null<T>, let's work on the <T> bit...
-							var defType = t.get();
-							if (defType.name=="Null") defType = switch params[0] {
-								case TType(t,_): t.get();
-								case _: null;
+							switch fieldType {
+								case TType(_.get() => defType,params) if (defType.name=="Null" || defType.name=="SNull"): 
+									fieldType = params[0];
+								default:
 							}
-
-
-							// Handle our BelongsTo, HasOne, HasMany typedefs - they are not serialized but we need to leave information about the type of relationship.
-							if (defType!=null) {
-								if (defType.name == "BelongsTo") relationFields.push('${f.name},BelongsTo,${getClassNameOfTypeParam(params[0])}');
-								else if (defType.name == "HasOne") relationFields.push('${f.name},HasOne,${getClassNameOfTypeParam(params[0])},$foreignKey');
-								else if (defType.name == "HasMany") relationFields.push('${f.name},HasMany,${getClassNameOfTypeParam(params[0])},$foreignKey');
+				
+							// If it's SData or SEnum, include it in our serialization
+							switch fieldType {
+								case TType(_.get() => defType,params) if (defType.name=="SData"): 
+									serializeFields.push(f.name);
+								case TType(_.get() => defType,params) if (defType.name=="SEnum"): 
+									serializeFields.push(f.name);
+								case TEnum(enumRef, params):
+									serializeFields.push(f.name);
+								default:
 							}
-						case { kind: FVar(AccCall,_), type: TInst(t,params) }:
-							if ((hasSkip==false || hasInclude) && t.get().name=="ManyToMany")
-							{
-								relationFields.push('${f.name},ManyToMany,${getClassNameOfTypeParam(params[1])}');
-								serializeFields.push("ManyToMany" + f.name);
+							
+							// If it's a relationship, add the related metadata.
+							function getClassNameOfTypeParam( t:Type ) {
+								return switch t {
+									case TInst(relatedModelClassType,params): relatedModelClassType.toString();
+									case TType(_,_): getClassNameOfTypeParam( Context.follow(t) );
+									case other: throw Context.error('Expected type parameter for field `${f.name}` to be a Class, but was ${other}',f.pos);
+								}
 							}
+							switch fieldType {
+								case TType(_.get() => defType, params) if (defType.name=="BelongsTo"):
+									relationFields.push( '${f.name},BelongsTo,${getClassNameOfTypeParam(params[0])}' );
+								case TType(_.get() => defType, params) if (defType.name=="HasOne"):
+									relationFields.push( '${f.name},HasOne,${getClassNameOfTypeParam(params[0])},${getRelationKeyForField(currentClass.name,f)}' );
+								case TType(_.get() => defType, params) if (defType.name=="HasMany"):
+									relationFields.push( '${f.name},HasMany,${getClassNameOfTypeParam(params[0])},${getRelationKeyForField(currentClass.name,f)}' );
+								case TInst(_.get() => classType,params) if (classType.name=="ManyToMany" && thisFieldIsNotSkipped):
+									relationFields.push('${f.name},ManyToMany,${getClassNameOfTypeParam(params[1])}');
+									serializeFields.push("ManyToMany" + f.name);
+								default:
+							} 
 						default:
 					}
 				}
@@ -478,7 +488,7 @@ class DBMacros
 			var privateIdent = privateName.resolve();
 			var getterName = 'get_${f.name}';
 			var setterName = 'set_${f.name}';
-			var relationKey = getRelationKeyForField(f);
+			var relationKey = getRelationKeyForField(Context.getLocalClass().get().name,f);
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
 			
@@ -545,7 +555,7 @@ class DBMacros
 			var privateIdent = privateName.resolve();
 			var getterName = ("get_" + f.name);
 			var setterName = ("set_" + f.name);
-			var relationKey = getRelationKeyForField(f);
+			var relationKey = getRelationKeyForField(Context.getLocalClass().get().name,f);
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
 			
@@ -701,7 +711,7 @@ class DBMacros
 			return fields;
 		}
 
-		static function getRelationKeyForField(?f:Field, ?cf:ClassField):String
+		static function getRelationKeyForField(className:String, ?f:Field, ?cf:ClassField):String
 		{
 			var relationKey:String = null;
 			var relationKeyMeta = getMetaFromField(f, cf, ":relationKey");
@@ -721,8 +731,7 @@ class DBMacros
 			else
 			{
 				// If not, guess at the name. From "SomeClass" model get "someClassID" name
-				var name = Context.getLocalClass().get().name;
-				relationKey = name.charAt(0).toLowerCase() + name.substr(1) + "ID";
+				relationKey = className.charAt(0).toLowerCase() + className.substr(1) + "ID";
 			}
 			return relationKey;
 		}
