@@ -398,7 +398,7 @@ class DBMacros
 						if ($privateIdent == null && $idIdent != null) {
 							// Should resolve synchronously if it's already in the cache
 							var p = $model.clientDS.get($idIdent);
-							p.then(function (v) $privateIdent = v);
+							p.then(function (v) if (v!=null) $privateIdent = v);
 							if (allRelationPromises!=null) allRelationPromises.push( p );
 						}
 					#end
