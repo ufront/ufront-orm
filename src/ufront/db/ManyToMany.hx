@@ -116,9 +116,9 @@ class ManyToMany<A:Object, B:Object> {
 			throw 'Error creating ManyToMany: aObject must not be null';
 		
 		this.aObject = aObject;
+		this.b = bClass;
 		#if server
 			this.a = Type.getClass(aObject);
-			this.b = bClass;
 			bManager = untyped bClass.manager;
 			this.tableName = generateTableName(a,b);
 			this.manager = getManager(tableName);
