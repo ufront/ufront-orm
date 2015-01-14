@@ -5,8 +5,9 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, client-side safety and more.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Fixes for serialization edge cases. Fix for calling setter when value is null on a `BelongsTo<T>` relationship. Stop using exact version dependencies, use `ufront` if you want exact dependencies.",
-  "version": "1.0.0-rc.8",
+  "releasenote": "Fixes for serialization of ManyToMany relationship on client.
+Reinstate our patched `sys.db.Manager` - until 3.2 lands this is still needed to overcome https://github.com/HaxeFoundation/haxe/pull/2692",
+  "version": "1.0.0-rc.9",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": "",
