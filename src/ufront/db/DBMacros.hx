@@ -386,8 +386,11 @@ class DBMacros
 			if (Context.defined("server"))
 			{
 				getterBody = macro {
-						if ($privateIdent == null && $idIdent != null)
-							$privateIdent = $model.manager.get($idIdent);
+					if ($privateIdent == null && $idIdent != null) {
+						var tmp = $model.manager.get($idIdent);
+						if ( tmp!=null )
+							$privateIdent = tmp;
+					}
 					return $privateIdent;
 				};
 			}

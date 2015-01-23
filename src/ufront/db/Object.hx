@@ -139,6 +139,7 @@ class Object #if server extends sys.db.Object #end {
 				catch (e:Dynamic) {
 					// If it failed because of a validation error, rethrow
 					if (Std.string(e).indexOf('Data validation failed') != -1) throw e;
+					// TODO: if we have a duplicate index error, this gets caught, an insert is attempted, and the message is just confusing.
 
 					// Error is probably because it had an ID, but it wasn't in the DB... so insert it
 					insert();
