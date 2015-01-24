@@ -5,8 +5,8 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, client-side safety and more.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Bug fix - when a BelongsTo field has the ID set, but no matching object in the database, accessing the property would result in a validation error. Now it simply returns null.",
-  "version": "1.0.0-rc.10",
+  "releasenote": "Add `DatabaseID<T>` abstract to help write APIs which that are more explicit than having `id:Int`.",
+  "version": "1.0.0-rc.11",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": "",
