@@ -20,7 +20,7 @@ abstract ValidationErrors( StringMap<Array<String>> ) {
 	/** Add an error to a particular field.  If the field already has an error, this will be added to it **/
 	@:arrayAccess public function set( field:String, error:String ) {
 		if ( !this.exists(field) ) this.set( field, [] );
-		this.get( field ).push( error );
+		if ( !Lambda.has(this.get( field ), error) ) this.get( field ).push( error );
 		return error;
 	}
 
