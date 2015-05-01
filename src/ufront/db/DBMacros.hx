@@ -332,14 +332,14 @@ class DBMacros
 			{
 				idType = TPath({
 					sub: null,
-					params: [TPType("SUInt".asComplexType())],
+					params: [TPType("sys.db.Types.SUInt".asComplexType())],
 					pack: [],
 					name: "Null"
 				});
 			}
 			else
 			{
-				idType = "SUInt".asComplexType();
+				idType = "sys.db.Types.SUInt".asComplexType();
 			}
 			fields.push({
 				pos: f.pos,
