@@ -404,7 +404,7 @@ The full list of methods and properties you have access to on a ManyToManyRelati
 - `remove(obj:B)`
 - `clear()`
 - `setList(iter:Iterable<B>)`
-- `iterator():Iterable<B>`
+- `iterator():Iterator<B>`
 
 See the API documentation for more details.
 
