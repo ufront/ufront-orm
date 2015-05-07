@@ -294,7 +294,7 @@ class Object #if server extends sys.db.Object #end {
 				s.serialize((date!=null) ? date.getTime() : null);
 			}
 			else if (f.startsWith("HasOne")) {
-				var o = Reflect.callMethod(this, Reflect.field(this, "get_" + f.substr(6)), []);
+				var o = Reflect.getProperty(this, f.substr(6));
 				s.serialize(o);
 			}
 			else if (f.startsWith("ManyToMany")) {
@@ -339,7 +339,7 @@ class Object #if server extends sys.db.Object #end {
 			}
 			else if (f.startsWith("HasOne")) {
 				var o = s.unserialize();
-				Reflect.setField(this, f.substr(6), o);
+				Reflect.setProperty(this, f.substr(6), o);
 			}
 			else if (f.startsWith("ManyToMany")) {
 				var bName = s.unserialize();
