@@ -287,6 +287,7 @@ class DBMacros
 									relationFields.push( '${f.name},BelongsTo,${getClassNameOfTypeParam(params[0])}' );
 								case TType(_.get() => defType, params) if (defType.name=="HasOne"):
 									relationFields.push( '${f.name},HasOne,${getClassNameOfTypeParam(params[0])},${getRelationKeyForField(currentClass.name,f)}' );
+									serializeFields.push("HasOne" + f.name);
 								case TType(_.get() => defType, params) if (defType.name=="HasMany"):
 									relationFields.push( '${f.name},HasMany,${getClassNameOfTypeParam(params[0])},${getRelationKeyForField(currentClass.name,f)}' );
 								case TInst(_.get() => classType,params) if (classType.name=="ManyToMany" && thisFieldIsNotSkipped):
