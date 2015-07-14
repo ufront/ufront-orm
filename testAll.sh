@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Must have environment variables set for MYSQL connection in ufront-orm tests.
+# eg. MYSQL_HOST="localhost" MYSQL_PORT="3306" MYSQL_USER="ufrontormtest" MYSQL_PASSWORD="ufrontormtest" MYSQL_DATABASE="ufrontormtest"  ./testAll.sh
+
 HAXE_COMPILER_PORT=6123
 
 echo "Start Haxe server"

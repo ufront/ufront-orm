@@ -10,7 +10,7 @@ class Person extends Object {
 	public var email:SString<50>;
 	public var age:STinyUInt;
 	public var bio:Null<SText>;
-	
+
 	// Some relationships
 	public var profile:HasOne<Profile>;
 	@:relationKey(authorID) public var posts:HasMany<BlogPost>;

@@ -24,14 +24,15 @@ class TestAll
 		Report.create(runner);
 		runner.run();
 	}
-	
+
 	public static function addTests( runner:Runner, cnx:Connection ) {
 		runner.addCase( new TestObjects(cnx) );
 		runner.addCase( new TestRelationships(cnx) );
 		runner.addCase( new TestSerialization(cnx) );
 		runner.addCase( new TestValidation(cnx) );
 		runner.addCase( new TestManyToMany(cnx) );
-		
+		runner.addCase( new TestQueryBuilder(cnx) );
+
 		runner.addCase( new Issue001(cnx) );
 	}
 }
