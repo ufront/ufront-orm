@@ -11,16 +11,30 @@ using tink.MacroApi;
 #end
 
 class QueryBuilder {
-	public static macro function generateSelect( rest:Array<Expr> ) {
-		var qb = new QueryBuilder();
-		qb.extractExpressionsFromSelectCall( rest );
-		qb.getModelClassType();
-		qb.processFields();
-		qb.processLimit();
-		return qb.generateSelectQuery();
+	/** Generate a select query on a given model. **/
+	public static macro function generateSelect( model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):ExprOf<String> {
+		return prepareSelectQuery( model, rest ).generateSelectQuery();
 	}
 
-	#if (macro || display)
+	/** Execute a select query, returning an iterable of each matching row. **/
+	public static macro function select( model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):Expr {
+		var qb = prepareSelectQuery( model, rest );
+		var query = qb.generateSelectQuery();
+		var complexType = qb.generateComplexTypeForFields( qb.fields );
+		return macro (sys.db.Manager.cnx.request($query):Iterator<$complexType>);
+	}
+
+	#if (macro)
+
+	static function prepareSelectQuery( model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):QueryBuilder {
+		var qb = new QueryBuilder();
+		qb.extractExpressionsFromSelectCall( model, rest );
+		qb.getModelClassType();
+		qb.processFields();
+		qb.processOrderBy();
+		qb.processLimit();
+		return qb;
+	}
 
 	var originalExprs:{
 		from:Expr,
@@ -33,6 +47,7 @@ class QueryBuilder {
 	var fields:Array<SelectField>;
 	var limitOffset:Expr;
 	var limitCount:Expr;
+	var orderBy:Array<OrderBy>;
 
 	public function new() {
 		originalExprs = {
@@ -49,17 +64,15 @@ class QueryBuilder {
 			fields:new Map()
 		};
 		fields = [];
+		orderBy = [];
 	}
 
 	/**
 	Extract the relevant expressions from a select() call.
 	**/
-	function extractExpressionsFromSelectCall( args:Array<Expr> ) {
+	function extractExpressionsFromSelectCall( model:ExprOf<Class<sys.db.Object>>, args:Array<Expr> ) {
+		this.originalExprs.from = model;
 		for ( queryPartExpr in args ) switch queryPartExpr {
-			case macro From($modelClassExpr):
-				if ( this.originalExprs.from!=null )
-					Context.error( 'Only one From() is allowed per select query', queryPartExpr.pos );
-				this.originalExprs.from = modelClassExpr;
 			case macro Fields($a{fields}):
 				for ( fieldNameExpr in fields )
 					this.originalExprs.fields.push( fieldNameExpr );
@@ -68,15 +81,15 @@ class QueryBuilder {
 					this.originalExprs.where.push( whereCondExpr );
 			case macro Limit($a{limitExprs}):
 				if ( limitExprs.length>2 )
-					Context.error( 'Limit should be in format: Limit(offset,number) or Limit(number)', limitExprs[2].pos );
+					limitExprs[2].reject( 'Limit should be in format: Limit(offset,number) or Limit(number)' );
 				if ( this.originalExprs.limit!=null )
-					Context.error( 'Only one Limit() is allowed per select query', queryPartExpr.pos );
+					queryPartExpr.reject( 'Only one Limit() is allowed per select query' );
 				this.originalExprs.limit = new Pair( limitExprs[0], limitExprs[1] );
 			case macro OrderBy($a{orderConds}):
 				for ( orderByExpr in orderConds )
 					this.originalExprs.orderBy.push( orderByExpr );
 			case _:
-				Context.error( 'Unknown query expression: ' + queryPartExpr.toString(), queryPartExpr.pos );
+				queryPartExpr.reject( 'Unknown query expression: '+queryPartExpr.toString() );
 		}
 	}
 
@@ -112,7 +125,22 @@ class QueryBuilder {
 		// Add any fields which are probably in the database. (Not skipped, and a var rather than a method).
 		for ( classField in classType.fields.get() ) {
 			if ( classField.meta.has(":skip")==false && classField.kind.match(FVar(_,_)) ) {
+				// Add all fields that are columns in the database.
 				this.table.fields.set( classField.name, classField );
+			}
+			else {
+				// Add any fields which are related tables (joins)
+				switch classField.type {
+					case TType(_.get() => { module:"ufront.db.Object", name:"HasOne" }, [relatedModel]):
+						this.table.fields.set( classField.name, classField );
+					case TType(_.get() => { module:"ufront.db.Object", name:"HasMany" }, [relatedModel]):
+						this.table.fields.set( classField.name, classField );
+					case TType(_.get() => { module:"ufront.db.Object", name:"BelongsTo" }, [relatedModel]):
+						this.table.fields.set( classField.name, classField );
+					case TType(_.get() => { module:"ufront.db.ManyToMany", name:"ManyToMany" }, [_,relatedModel]):
+						this.table.fields.set( classField.name, classField );
+					case _:
+				}
 			}
 		}
 	}
@@ -139,7 +167,6 @@ class QueryBuilder {
 					this.fields.push( getFieldDetails(fieldName,fieldName,this.table,field.pos) );
 				case _:
 			}
-			trace( field.toString() );
 		}
 	}
 
@@ -151,8 +178,49 @@ class QueryBuilder {
 		return {
 			name: aliasName,
 			resultSetField: table.name + "." + fieldName,
-			type: Left( classField.type )
+			type: Left( classField.type ),
+			pos: pos
 		};
+	}
+
+	/**
+	Process and validate the OrderBy() statements.
+	**/
+	function processOrderBy() {
+		for ( field in this.originalExprs.orderBy ) {
+			// Extract the direction and the expression that gives us the field.
+			var direction:SortDirection,
+			    fieldExpr:Expr;
+			switch field {
+				case macro -$expr: fieldExpr=expr; direction=Descending;
+				case macro $expr: fieldExpr=expr; direction=Ascending;
+			}
+			//
+			var orderByEntry = switch fieldExpr {
+				case macro $i{columnIdent} if (columnIdent.startsWith("$")):
+					// It is a column name.
+					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
+					{ column:Left(columnName), direction:direction };
+				case macro $i{columnIdent}.$fieldAccess:
+					trace( 'We have a field access' );
+
+					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
+					{ column:Left(columnName), direction:direction };
+				case macro $expr:
+					// It is probably a runtime expression, we'll ask the compiler to check it is a String.
+					{ column:Right(macro @:pos(expr.pos) ($expr:String)), direction:direction };
+			}
+			orderBy.push( orderByEntry );
+		}
+	}
+
+	function checkColumnExists( columnName:String, pos:Position ) {
+		// TODO: Adjust this to support checking columns in related/joined tables.
+		// TODO: Consider if it is feasible to support field aliases
+		if ( table.fields.exists(columnName)==false ) {
+			Context.error( 'Column $columnName does not exist on table ${table.name}', pos );
+		}
+		return columnName;
 	}
 
 	/**
@@ -180,7 +248,7 @@ class QueryBuilder {
 		var fields = generateSelectQueryFields();
 		var joins = macro "";
 		var where = macro "";
-		var orderBy = macro "";
+		var orderBy = generateSelectQueryOrderBy();
 		var limit = generateSelectQueryLimit();
 
 		return macro 'SELECT '+$fields
@@ -202,15 +270,47 @@ class QueryBuilder {
 		else return macro "*";
 	}
 
-	function generateSelectQueryLimitOrderBy():Expr {
+	function generateSelectQueryOrderBy():Expr {
 		// TODO: make sure we are quoting these, checking for SQL injections.
-		return macro "ORDER BY ___________";
+		if ( orderBy.length>0 ) {
+			var orderExpr = macro "ORDER BY";
+			var first = true;
+			for ( orderByEntry in orderBy ) {
+				var commaExpr = (first) ? macro " " : macro ", ";
+				var columnExpr = switch orderByEntry.column {
+					case Left(name): macro $v{name};
+					case Right(expr): expr;
+				}
+				var directionExpr = macro $v{(orderByEntry.direction:String)}
+				orderExpr = macro $orderExpr + $commaExpr + $columnExpr + " " + $directionExpr;
+				first = false;
+			}
+			return orderExpr;
+		}
+		else return macro "";
 	}
 
 	function generateSelectQueryLimit():Expr {
 		// TODO: make sure we are quoting these, checking for SQL injections.
-		// TODO: think about supporting SQL Server 2012 syntax: http://stackoverflow.com/a/9241984/180995
+		// TODO: consider how to support SQL Server 2012 syntax: http://stackoverflow.com/a/9241984/180995
 		return macro "LIMIT "+$limitOffset+", "+$limitCount;
+	}
+
+	function generateComplexTypeForFields( fields:Array<SelectField> ):ComplexType {
+		var fieldsForCT:Array<Field> = [];
+		for (f in fields) {
+			var fieldCT = switch f.type {
+				case Left(type): type.toComplex({ direct:true });
+				case Right(subfields): generateComplexTypeForFields( subfields );
+			}
+			var field:Field = {
+				pos: f.pos,
+				name: f.name,
+				kind: FVar(fieldCT, null),
+			};
+			fieldsForCT.push( field );
+		}
+		return TAnonymous( fieldsForCT );
 	}
 	#end
 }
@@ -218,13 +318,19 @@ class QueryBuilder {
 typedef SelectTable = {
 	name:String,
 	model:ClassType,
-	joins:Array<{ table:SelectTable, type:JoinType, leftField:String, rightField:String }>,
+	joins:Array<JoinDescription>,
 	fields:Map<String,ClassField>
 }
+typedef JoinDescription = {
+	table:SelectTable,
+	type:JoinType,
+	leftField:String,
+	rightField:String
+};
 @:enum abstract JoinType(String) from String to String {
-	var Inner = "INNER JOIN";
-	var Left = "LEFT JOIN";
-	var Right = "LEFT JOIN";
+	var InnerJoin = "INNER JOIN";
+	var LeftJoin = "LEFT JOIN";
+	var RightJoin = "LEFT JOIN";
 }
 typedef SelectField = {
 	/** The name (or alias) of the field. **/
@@ -233,4 +339,11 @@ typedef SelectField = {
 	resultSetField:Null<String>,
 	/** Either the type of this field, or if it is a parent, the group of child fields. **/
 	type:Either<Type,Array<SelectField>>,
+	/** The pos this field was declared. **/
+	pos:Position,
+}
+typedef OrderBy = { column:Either<String,ExprOf<String>>, direction:SortDirection }
+@:enum abstract SortDirection(String) to String {
+	var Ascending = "ASC";
+	var Descending = "DESC";
 }
