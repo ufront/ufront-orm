@@ -38,15 +38,24 @@ class TestQueryBuilder extends DBTestClass {
 		var min = 0;
 		var thirdOrderColumn = "id";
 		function fourth() return "modified";
-		var result = Person.select(
-			Where($age>min && age<17),
-			Where($bio!=null),
+		var query = Person.generateSelect(
 			Fields(first = firstName,surname,age,modified),
+			Where( ($age>min && $age==24) || $age<28+min),
+			Where($bio==null || $firstName=="Jason"),
 			OrderBy($age,$surname,thirdOrderColumn,-fourth()),
 			Limit(min,2)
 		);
+		var result = Person.select(
+			Fields(first = firstName,surname,age,modified),
+			Where( ($age>min && $age==24) || $age<28+min),
+			Where($bio==null || $firstName=="Jason"),
+			OrderBy($age,$surname,thirdOrderColumn,-fourth()),
+			Limit(min,2)
+		);
+		trace("RESULTS:");
 		for ( row in result ) {
-			trace ( row.surname.substr(0) );
+			trace ( row );
 		}
+		Assert.equals( "", query );
 	}
 }

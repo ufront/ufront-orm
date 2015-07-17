@@ -31,6 +31,7 @@ class QueryBuilder {
 		qb.extractExpressionsFromSelectCall( model, rest );
 		qb.getModelClassType();
 		qb.processFields();
+		qb.processWhere();
 		qb.processOrderBy();
 		qb.processLimit();
 		return qb;
@@ -45,6 +46,7 @@ class QueryBuilder {
 	};
 	var table:SelectTable;
 	var fields:Array<SelectField>;
+	var whereCondition:Expr;
 	var limitOffset:Expr;
 	var limitCount:Expr;
 	var orderBy:Array<OrderBy>;
@@ -106,10 +108,10 @@ class QueryBuilder {
 						this.table.model = classType;
 						addFieldsFromClassTypeToContext( classType );
 					case _:
-						Context.error( 'Expected From() to contain a class, but was '+typeName, this.originalExprs.from.pos );
+						this.originalExprs.from.reject( 'Should be called on a Class<sys.db.Object>, but was $typeName' );
 				}
 			case other:
-				Context.error( 'Expected From() to contain a class, but was '+other, this.originalExprs.from.pos );
+				this.originalExprs.from.reject( 'Should be called on a Class<sys.db.Object>, but was $other' );
 		}
 	}
 
@@ -166,6 +168,7 @@ class QueryBuilder {
 				case macro $i{fieldName}:
 					this.fields.push( getFieldDetails(fieldName,fieldName,this.table,field.pos) );
 				case _:
+					field.reject( 'Unexpected expression in field list: ${field.toString()}' );
 			}
 		}
 	}
@@ -181,6 +184,22 @@ class QueryBuilder {
 			type: Left( classField.type ),
 			pos: pos
 		};
+	}
+
+	/**
+	Process and validate the Where() statements.
+	**/
+	function processWhere() {
+		whereCondition = null;
+		switch ( this.originalExprs.where.length ) {
+			case 0:
+			case 1:
+				whereCondition = this.originalExprs.where[0];
+			case x:
+				whereCondition = macro (${this.originalExprs.where[0]});
+				for ( i in 1...x )
+					whereCondition = macro $whereCondition && (${this.originalExprs.where[i]});
+		}
 	}
 
 	/**
@@ -201,7 +220,7 @@ class QueryBuilder {
 					// It is a column name.
 					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
 					{ column:Left(columnName), direction:direction };
-				case macro $i{columnIdent}.$fieldAccess:
+				case macro $i{columnIdent}.$fieldAccess if (columnIdent.startsWith("$")):
 					trace( 'We have a field access' );
 
 					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
@@ -247,9 +266,9 @@ class QueryBuilder {
 		var table = macro $v{this.table.name};
 		var fields = generateSelectQueryFields();
 		var joins = macro "";
-		var where = macro "";
-		var orderBy = generateSelectQueryOrderBy();
-		var limit = generateSelectQueryLimit();
+		var where = generateWhere();
+		var orderBy = generateOrderBy();
+		var limit = generateLimit();
 
 		return macro 'SELECT '+$fields
 			+" FROM "+$table
@@ -270,7 +289,78 @@ class QueryBuilder {
 		else return macro "*";
 	}
 
-	function generateSelectQueryOrderBy():Expr {
+	function generateWhere():Expr {
+		function exprIsColumn( expr:Expr ):Bool {
+			return switch expr {
+				case macro $i{name} if (name.startsWith("$")): true;
+				default: false;
+			}
+		}
+		function hasColumnInExpr( expr:Expr ):Bool {
+			return expr.has( exprIsColumn );
+		}
+		function printWhereExpr( expr:Expr ):Expr {
+			switch expr {
+				case macro ($innerExpr):
+					return macro "("+${printWhereExpr(innerExpr)}+")";
+				case macro $expr1 && $expr2:
+					return macro ${printWhereExpr(expr1)}+" AND "+${printWhereExpr(expr2)};
+				case macro $expr1 || $expr2:
+					return macro ${printWhereExpr(expr1)}+" OR "+${printWhereExpr(expr2)};
+				case macro $colIdent==null, macro null==$colIdent if (exprIsColumn(colIdent)):
+					return macro ${printWhereExpr(colIdent)}+" IS NULL";
+				case macro $colIdent!=null, macro null!=$colIdent if (exprIsColumn(colIdent)):
+					return macro ${printWhereExpr(colIdent)}+" IS NOT NULL";
+				case { expr:EBinop(opType,expr1,expr2), pos:p }:
+					var expr1IsColumn = exprIsColumn(expr1);
+					var expr2IsColumn = exprIsColumn(expr2);
+					if ( expr1IsColumn || expr2IsColumn ) {
+						var opStr = switch opType {
+							case OpEq: "=";
+							case OpNotEq: "<>";
+							case OpGt: ">";
+							case OpGte: ">=";
+							case OpLt: "<";
+							case OpLte: "<=";
+							default:
+								expr.reject( 'Unsupported operator in Where() clause, only =,!=,<,>,<=,>= are supported:'+expr.toString() );
+								"";
+						}
+						// Either print the column name or a quoted expression.
+						expr1 = expr1IsColumn ? printWhereExpr( expr1 ) : quoteExpr( expr1 );
+						expr2 = expr2IsColumn ? printWhereExpr( expr2 ) : quoteExpr( expr2 );
+						return macro $expr1+" "+$v{opStr}+" "+$expr2;
+					}
+					else if ( hasColumnInExpr(expr1) || hasColumnInExpr(expr2) ) {
+						expr.reject( 'Comparisons can have only a column or an expression on either side of the operator, not both: '+expr.toString() );
+					}
+					else {
+						expr.reject( 'No column found in expression: '+expr.toString() );
+					}
+				case macro $i{_.substr(1) => colName} if (exprIsColumn(expr)):
+					checkColumnExists( colName, expr.pos );
+					return macro $v{colName};
+				case _:
+
+			}
+			// If no match was found, reject it.
+			expr.reject( 'Unsupported expression in Where() clause: '+expr.toString() );
+			return macro "";
+		}
+		return
+			if ( whereCondition==null ) macro "";
+			else macro "WHERE "+${printWhereExpr(whereCondition)};
+	}
+
+	function quoteExpr( e:Expr ) {
+		return switch e {
+			case macro true: macro "TRUE";
+			case macro false: macro "FALSE";
+			default: macro sys.db.Manager.quoteAny( $e );
+		}
+	}
+
+	function generateOrderBy():Expr {
 		// TODO: make sure we are quoting these, checking for SQL injections.
 		if ( orderBy.length>0 ) {
 			var orderExpr = macro "ORDER BY";
@@ -290,7 +380,7 @@ class QueryBuilder {
 		else return macro "";
 	}
 
-	function generateSelectQueryLimit():Expr {
+	function generateLimit():Expr {
 		// TODO: make sure we are quoting these, checking for SQL injections.
 		// TODO: consider how to support SQL Server 2012 syntax: http://stackoverflow.com/a/9241984/180995
 		return macro "LIMIT "+$limitOffset+", "+$limitCount;
