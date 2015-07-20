@@ -6,6 +6,7 @@ import haxe.macro.Type;
 using haxe.macro.Tools;
 using StringTools;
 using tink.CoreApi;
+using Lambda;
 #if macro
 using tink.MacroApi;
 #end
@@ -59,12 +60,7 @@ class QueryBuilder {
 			limit:null,
 			orderBy:[]
 		};
-		table = {
-			name:null,
-			model:null,
-			joins:[],
-			fields:new Map()
-		};
+		table = null;
 		fields = [];
 		orderBy = [];
 	}
@@ -102,45 +98,65 @@ class QueryBuilder {
 		switch Context.typeof( this.originalExprs.from ) {
 			case TType(_.get() => tdef, []) if (tdef.name.startsWith("Class<") && tdef.name.endsWith(">")):
 				var typeName = tdef.name.substring("Class<".length, tdef.name.length-1);
-				switch Context.getType( typeName ) {
-					case TInst(_.get() => classType, []):
-						this.table.name = getTableNameFromClassType( classType );
-						this.table.model = classType;
-						addFieldsFromClassTypeToContext( classType );
-					case _:
-						this.originalExprs.from.reject( 'Should be called on a Class<sys.db.Object>, but was $typeName' );
-				}
+				this.table = getTableInfoFromType( Context.getType(typeName), this.originalExprs.from.pos );
 			case other:
 				this.originalExprs.from.reject( 'Should be called on a Class<sys.db.Object>, but was $other' );
 		}
 	}
 
+	function getTableInfoFromType( t:Type, pos:Position ):SelectTable {
+		var modelTable = {
+			name:null,
+			model:null,
+			fields:new Map()
+		};
+		switch t {
+			case TInst(_.get() => classType, []):
+				modelTable.name = getTableNameFromClassType( classType );
+				modelTable.model = classType;
+				addFieldsFromClassTypeToTable( classType, modelTable );
+			case _:
+				Context.error( 'Expected a class, but ${t.toString()} was $t', pos );
+		}
+		return modelTable;
+	}
+
 	/**
 	Get all of the fields in the model which are accessible for select queries.
 	**/
-	function addFieldsFromClassTypeToContext( classType:ClassType ) {
+	@:access( ufront.db.DBMacros )
+	function addFieldsFromClassTypeToTable( classType:ClassType, modelTable:SelectTable ) {
 		// Add super-fields first.
 		if ( classType.superClass!=null ) {
 			var superClassType = classType.superClass.t.get();
-			addFieldsFromClassTypeToContext( superClassType );
+			addFieldsFromClassTypeToTable( superClassType, modelTable );
 		}
 		// Add any fields which are probably in the database. (Not skipped, and a var rather than a method).
 		for ( classField in classType.fields.get() ) {
 			if ( classField.meta.has(":skip")==false && classField.kind.match(FVar(_,_)) ) {
 				// Add all fields that are columns in the database.
-				this.table.fields.set( classField.name, classField );
+				modelTable.fields.set( classField.name, Left(classField) );
 			}
 			else {
 				// Add any fields which are related tables (joins)
+				function addJoinField( relatedModel:Type, joinType:JoinType ) {
+					var relatedTable = Lazy.ofFunc( getTableInfoFromType.bind(relatedModel,classField.pos) );
+					var joinDescription = { relatedTable:relatedTable, usedInQuery:false, type:joinType };
+					modelTable.fields.set( classField.name, Right(joinDescription) );
+				}
 				switch classField.type {
 					case TType(_.get() => { module:"ufront.db.Object", name:"HasOne" }, [relatedModel]):
-						this.table.fields.set( classField.name, classField );
+						var relationKey = DBMacros.getRelationKeyForField( modelTable.model.name, classField );
+						addJoinField( relatedModel, JTHasOne(relationKey) );
 					case TType(_.get() => { module:"ufront.db.Object", name:"HasMany" }, [relatedModel]):
-						this.table.fields.set( classField.name, classField );
+						var relationKey = DBMacros.getRelationKeyForField( modelTable.model.name, classField );
+						addJoinField( relatedModel, JTHasMany(relationKey) );
 					case TType(_.get() => { module:"ufront.db.Object", name:"BelongsTo" }, [relatedModel]):
-						this.table.fields.set( classField.name, classField );
+						addJoinField( relatedModel, JTBelongsTo );
 					case TType(_.get() => { module:"ufront.db.ManyToMany", name:"ManyToMany" }, [_,relatedModel]):
-						this.table.fields.set( classField.name, classField );
+						addJoinField( relatedModel, JTManyToMany );
+					case TType(_, _):
+						// TODO: follow typedefs recursively to see if there is a typedef to one of the above relation types.
 					case _:
 				}
 			}
@@ -161,29 +177,70 @@ class QueryBuilder {
 	Process and validates the fields we are supposed to be selecting.
 	**/
 	function processFields() {
+		var errorMsg = 'Unexpected expression in field list';
 		for ( field in this.originalExprs.fields ) {
 			switch field {
-				case macro $i{aliasName} = $i{fieldName}:
-					this.fields.push( getFieldDetails(aliasName,fieldName,this.table,field.pos) );
-				case macro $i{fieldName}:
-					this.fields.push( getFieldDetails(fieldName,fieldName,this.table,field.pos) );
-				case _:
-					field.reject( 'Unexpected expression in field list: ${field.toString()}' );
+				case macro $alias = $column:
+					var aliasParts = extractFieldAccessParts( alias, errorMsg );
+					var fieldParts = extractFieldAccessParts( column, errorMsg );
+					addField( aliasParts, fieldParts, field.pos );
+				case macro $column:
+					var fieldParts = extractFieldAccessParts( column, errorMsg );
+					addField( fieldParts.copy(), fieldParts, field.pos );
 			}
 		}
 	}
 
-	function getFieldDetails( aliasName:String, fieldName:String, table:SelectTable, pos:Position ):SelectField {
-		var classField = table.fields.get( fieldName );
-		if ( classField==null )
-			Context.error( 'Table ${table.name} has no column ${fieldName}', pos );
-		// TODO: Add support for our related objects. We'll also need to make sure they're not skipped during `addFieldsFromClassTypeToContext`.
-		return {
-			name: aliasName,
-			resultSetField: table.name + "." + fieldName,
-			type: Left( classField.type ),
-			pos: pos
-		};
+	function extractFieldAccessParts( e:Expr, errorMsg:String ):Array<String> {
+		switch e {
+			case macro $i{ident}:
+				return [ident];
+			case macro $expr.$fieldAccess:
+				var arr = extractFieldAccessParts( expr, errorMsg );
+				arr.push( fieldAccess );
+				return arr;
+			case _:
+				e.reject( '$errorMsg: ${e.toString()}' );
+				return [];
+		}
+	}
+
+	function addField( aliasParts:Array<String>, fieldParts:Array<String>, pos:Position ) {
+		// If the alias is a property access, drill down through the parent fields to get the relevant SelectField.
+		var currentFields = this.fields;
+		var field:SelectField = null;
+		while ( aliasParts.length>0 ) {
+			var aliasName = aliasParts.shift();
+			field = currentFields.find(function(f) return f.name==aliasName);
+			if ( field==null ) {
+				field = {
+					name:aliasName,
+					resultSetField:null,
+					type:null,
+					pos:pos
+				};
+				currentFields.push( field );
+			}
+			// If there are still more fields to come, set this one up as a parent.
+			if ( aliasParts.length>0 && field.type==null ) {
+				currentFields = [];
+				field.type = Right(currentFields);
+			}
+			else if ( aliasParts.length>0 ) {
+				switch field.type {
+					case Right(subFields):
+						currentFields = subFields;
+					case Left(_):
+						Context.error( 'The field alias ${aliasParts.join(".")} part $aliasName is being used as both a column and a join', pos );
+				}
+			}
+		}
+		// Now that we have the relevant SelectField, set the details.
+		var colPair = getColumn( fieldParts, pos );
+		var selectTable = colPair.a;
+		var classField = colPair.b;
+		field.type = Left( classField.type );
+		field.resultSetField = '${selectTable.name}.${classField.name}';
 	}
 
 	/**
@@ -217,14 +274,12 @@ class QueryBuilder {
 			//
 			var orderByEntry = switch fieldExpr {
 				case macro $i{columnIdent} if (columnIdent.startsWith("$")):
-					// It is a column name.
-					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
-					{ column:Left(columnName), direction:direction };
-				case macro $i{columnIdent}.$fieldAccess if (columnIdent.startsWith("$")):
-					trace( 'We have a field access' );
-
-					var columnName = checkColumnExists( columnIdent.substr(1), field.pos );
-					{ column:Left(columnName), direction:direction };
+					// TODO: refactor this to use extractFieldAccessParts and support join columns
+					var columnName = columnIdent.substr(1);
+					var pair = getColumn( [columnName], field.pos );
+					var table = pair.a;
+					var field = pair.b;
+					{ column:Left({ table:table.name, column:field.name }), direction:direction };
 				case macro $expr:
 					// It is probably a runtime expression, we'll ask the compiler to check it is a String.
 					{ column:Right(macro @:pos(expr.pos) ($expr:String)), direction:direction };
@@ -233,13 +288,28 @@ class QueryBuilder {
 		}
 	}
 
-	function checkColumnExists( columnName:String, pos:Position ) {
-		// TODO: Adjust this to support checking columns in related/joined tables.
+	function getColumn( columnParts:Array<String>, pos:Position ):Pair<SelectTable,ClassField> {
 		// TODO: Consider if it is feasible to support field aliases
-		if ( table.fields.exists(columnName)==false ) {
-			Context.error( 'Column $columnName does not exist on table ${table.name}', pos );
+		var currentTable:SelectTable = table;
+		while ( columnParts.length>0 ) {
+			var part = columnParts.shift();
+			var field = currentTable.fields.get( part );
+			if ( field!=null ) {
+				switch field {
+					case Left(classField):
+						if ( columnParts.length==0 )
+							return new Pair( currentTable, classField );
+						else
+							Context.error( 'Cannot access property "${columnParts.join(".")}" on column "$part" on table "${currentTable.name}"', pos );
+					case Right(joinDescription):
+						currentTable = joinDescription.relatedTable.get();
+						// Mark this join as being used so we include it in the query.
+						joinDescription.usedInQuery = true;
+				}
+			}
+			else Context.error( 'Column $part does not exist on table ${currentTable.name}', pos );
 		}
-		return columnName;
+		return null;
 	}
 
 	/**
@@ -263,30 +333,71 @@ class QueryBuilder {
 	}
 
 	function generateSelectQuery():Expr {
-		var table = macro $v{this.table.name};
+		var table = generateTable();
 		var fields = generateSelectQueryFields();
-		var joins = macro "";
 		var where = generateWhere();
 		var orderBy = generateOrderBy();
 		var limit = generateLimit();
 
 		return macro 'SELECT '+$fields
 			+" FROM "+$table
-			+" "+$joins
 			+" "+$where
 			+" "+$orderBy
 			+" "+$limit;
+	}
+
+	function generateTable():Expr {
+		var tableAndJoins = addJoins( table.name, table );
+		var ret = macro $v{tableAndJoins};
+		return ret;
+	}
+
+	function addJoins( tableAndJoins:String, currentTable:SelectTable ):String {
+		for ( fieldName in currentTable.fields.keys() ) {
+			switch currentTable.fields[fieldName] {
+				case Right(join) if (join.usedInQuery):
+					switch join.type {
+						case JTHasOne(relKey):
+							var relatedTable = join.relatedTable.get();
+							var joinStatement = 'JOIN ${relatedTable.name} ON ${relatedTable.name}.${relKey} = ${currentTable.name}.id';
+							tableAndJoins = '$tableAndJoins $joinStatement';
+							tableAndJoins = addJoins( tableAndJoins, relatedTable );
+						case JTHasMany(relKey):
+							throw "HasMany Joins are not supported yet";
+						case JTBelongsTo:
+							var relatedTable = join.relatedTable.get();
+							var joinStatement = 'JOIN ${relatedTable.name} ON ${relatedTable.name}.id = ${currentTable.name}.${fieldName}ID';
+							tableAndJoins = '$tableAndJoins $joinStatement';
+							tableAndJoins = addJoins( tableAndJoins, relatedTable );
+						case JTManyToMany:
+							throw "ManyToMany Joins are not supported yet";
+					}
+				case _:
+			}
+		}
+		return tableAndJoins;
 	}
 
 	function generateSelectQueryFields():Expr {
 		if ( fields.length>0 ) {
 			var fieldNames = [];
 			for ( f in fields ) {
-				fieldNames.push( '${f.resultSetField} AS ${f.name}' );
+				addFieldToFieldList( f, "", fieldNames );
 			}
 			return macro $v{fieldNames.join(", ")};
 		}
 		else return macro "*";
+	}
+
+	function addFieldToFieldList( f:SelectField, prefix:String, fieldNames:Array<String> ) {
+		switch f.type {
+			case Left(t):
+				fieldNames.push( '${f.resultSetField} AS ${prefix}${f.name}' );
+			case Right(subfields):
+				for ( subfield in subfields ) {
+					addFieldToFieldList( subfield, prefix+f.name+"_", fieldNames );
+				}
+		}
 	}
 
 	function generateWhere():Expr {
@@ -337,8 +448,11 @@ class QueryBuilder {
 					else {
 						expr.reject( 'No column found in expression: '+expr.toString() );
 					}
+				// TODO: support field access / joins.
+				// case $i{columnName}.$fieldAccess if (exprIsColumn(expr))
+				// OR use extractFieldAccessParts.
 				case macro $i{_.substr(1) => colName} if (exprIsColumn(expr)):
-					checkColumnExists( colName, expr.pos );
+					getColumn( [colName], expr.pos );
 					return macro $v{colName};
 				case _:
 
@@ -368,7 +482,8 @@ class QueryBuilder {
 			for ( orderByEntry in orderBy ) {
 				var commaExpr = (first) ? macro " " : macro ", ";
 				var columnExpr = switch orderByEntry.column {
-					case Left(name): macro $v{name};
+					case Left(details):
+						macro $v{details.table}+"."+$v{details.column};
 					case Right(expr): expr;
 				}
 				var directionExpr = macro $v{(orderByEntry.direction:String)}
@@ -383,7 +498,9 @@ class QueryBuilder {
 	function generateLimit():Expr {
 		// TODO: make sure we are quoting these, checking for SQL injections.
 		// TODO: consider how to support SQL Server 2012 syntax: http://stackoverflow.com/a/9241984/180995
-		return macro "LIMIT "+$limitOffset+", "+$limitCount;
+		return
+			if ( limitOffset!=null && limitCount!=null ) macro "LIMIT "+$limitOffset+", "+$limitCount;
+			else macro "";
 	}
 
 	function generateComplexTypeForFields( fields:Array<SelectField> ):ComplexType {
@@ -408,19 +525,18 @@ class QueryBuilder {
 typedef SelectTable = {
 	name:String,
 	model:ClassType,
-	joins:Array<JoinDescription>,
-	fields:Map<String,ClassField>
+	fields:Map<String,Either<ClassField,JoinDescription>>
 }
 typedef JoinDescription = {
-	table:SelectTable,
-	type:JoinType,
-	leftField:String,
-	rightField:String
-};
-@:enum abstract JoinType(String) from String to String {
-	var InnerJoin = "INNER JOIN";
-	var LeftJoin = "LEFT JOIN";
-	var RightJoin = "LEFT JOIN";
+	relatedTable:Lazy<SelectTable>,
+	usedInQuery:Bool,
+	type:JoinType
+}
+enum JoinType {
+	JTBelongsTo;
+	JTHasOne( relationKey:String );
+	JTHasMany( relationKey:String );
+	JTManyToMany;
 }
 typedef SelectField = {
 	/** The name (or alias) of the field. **/
@@ -432,7 +548,12 @@ typedef SelectField = {
 	/** The pos this field was declared. **/
 	pos:Position,
 }
-typedef OrderBy = { column:Either<String,ExprOf<String>>, direction:SortDirection }
+typedef OrderBy = {
+	/** Either a static table/column name, or a runtime expression which will give the table/column name. **/
+	column:Either<{ table:String, column:String },ExprOf<String>>,
+	/** Ascending or Descending? **/
+	direction:SortDirection
+}
 @:enum abstract SortDirection(String) to String {
 	var Ascending = "ASC";
 	var Descending = "DESC";
