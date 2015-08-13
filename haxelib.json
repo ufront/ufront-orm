@@ -5,8 +5,13 @@
   "tags": ["ufront","db","spod","activerecord","orm","neko","php","model"],
   "description": "An extension of Haxe's sys.db classes that provide relationships (foreign keys), validation, client-side safety and more.",
   "contributors": ["fponticelli","jason"],
-  "releasenote": "Add `DatabaseID<T>` abstract to help write APIs which that are more explicit than having `id:Int`.",
-  "version": "1.0.0-rc.11",
+  "releasenote": "
+-PHP Mysql : Fixes error in testValidateFieldFunction (Thanks Jon Borgonia)
+-Fix compilation error when `sys.db.Types` is  not imported and `BelongsTo<>` is used. (Thanks Kevin Leung)
+-Remove sys.db.Manager patch that was only required for Haxe 3.1.3
+-Improved unit test coverage.
+  ",
+  "version": "1.0.0",
   "url": "https://github.com/ufront/ufront-orm",
   "dependencies": {
     "tink_core": "",
