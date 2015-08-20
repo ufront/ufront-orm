@@ -22,7 +22,10 @@ class QueryBuilder {
 		var qb = prepareSelectQuery( model, rest );
 		var query = qb.generateSelectQuery();
 		var complexType = qb.generateComplexTypeForFields( qb.fields );
-		return macro (sys.db.Manager.cnx.request($query):Iterator<$complexType>);
+		return macro {
+			var resultSet = sys.db.Manager.cnx.request( $query );
+			([for (r in resultSet) r]:Array<$complexType>);
+		}
 	}
 
 	#if (macro)
