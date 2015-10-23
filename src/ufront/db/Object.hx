@@ -13,7 +13,7 @@ using StringTools;
 using Lambda;
 using tink.CoreApi;
 
-/** 
+/**
 
 Ufront DB Objects
 
@@ -65,13 +65,13 @@ Build macro effects:
 
 #if !macro @:autoBuild(ufront.db.DBMacros.setupDBObject()) #end
 class Object #if server extends sys.db.Object #end {
-	
+
 	/** A default ID. Auto-incrementing 32-bit Int. **/
 	public var id:SId;
-	
+
 	/** The time this record was first created. **/
 	public var created:SDateTime;
-	
+
 	/** The time this record was last modified. **/
 	public var modified:SDateTime;
 
@@ -146,7 +146,7 @@ class Object #if server extends sys.db.Object #end {
 				}
 			}
 		}
-		
+
 		/**
 			Refresh the relations on this object.
 			Currently this does not refresh the object itself, it merely empties the cached related objects so they will be fetched again.
@@ -159,7 +159,7 @@ class Object #if server extends sys.db.Object #end {
 				Reflect.setField( this, fieldName, null );
 			}
 		}
-		
+
 		/**
 			Even though it's non-sensical to have a manager on `ufront.db.Object`, the Haxe record macros (not the ufront ones) add a `__getManager` field if we don't have one (platforms other than neko.)
 			This breaks things when you have an inheritance chain, where `ufront.db.Object` doesn't have a manager, but it's children do.
@@ -264,15 +264,15 @@ class Object #if server extends sys.db.Object #end {
 	public function validate():Bool {
 		if ( validationErrors==null )  validationErrors = new ValidationErrors();
 		else validationErrors.reset();
-		
+
 		_validationsFromMacros();
-		
+
 		return validationErrors.isValid;
 	}
-	
+
 	/** The build macro will save override this method and populate it with validation statements. **/
 	function _validationsFromMacros() {}
-	
+
 	function get_saved():Signal<Noise> {
 		if ( saved==null ) {
 			savedTrigger = Signal.trigger();
@@ -381,7 +381,7 @@ function() {
 
 T must be a type that extends ufront.db.Object.
 **/
-typedef BelongsTo<T> = T;
+typedef BelongsTo<T:Object> = T;
 
 /**
 HasMany relationship.
@@ -409,7 +409,7 @@ function() {
 
 T must be a type that extends `ufront.db.Object`
 **/
-typedef HasMany<T> = List<T>
+typedef HasMany<T:Object> = List<T>
 
 /**
 HasOne relationship.
@@ -420,4 +420,4 @@ Similar to `HasMany`, you must update relationships by changing the `BelongsTo` 
 
 T must be a type that extends `ufront.db.Object`
 **/
-typedef HasOne<T> = Null<T>;
+typedef HasOne<T:Object> = Null<T>;
