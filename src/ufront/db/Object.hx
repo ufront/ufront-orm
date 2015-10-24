@@ -293,6 +293,10 @@ class Object #if server extends sys.db.Object #end {
 				var date=Reflect.field(this, f);
 				s.serialize((date!=null) ? date.getTime() : null);
 			}
+			else if (f.startsWith("HasOne")) {
+				var o = Reflect.getProperty(this, f.substr(6));
+				s.serialize(o);
+			}
 			else if (f.startsWith("ManyToMany")) {
 				var m2m:ManyToMany<Dynamic,Dynamic> = Reflect.field(this, f.substr(10));
 				if (m2m!=null) {
@@ -332,6 +336,10 @@ class Object #if server extends sys.db.Object #end {
 			if (f == "modified" || f == "created") {
 				var time:Null<Float> = s.unserialize();
 				Reflect.setProperty(this, f, (time!=null) ? Date.fromTime(time) : Date.now());
+			}
+			else if (f.startsWith("HasOne")) {
+				var o = s.unserialize();
+				Reflect.setProperty(this, f.substr(6), o);
 			}
 			else if (f.startsWith("ManyToMany")) {
 				var bName = s.unserialize();
