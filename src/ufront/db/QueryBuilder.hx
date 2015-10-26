@@ -12,6 +12,8 @@ using tink.MacroApi;
 #end
 
 class QueryBuilder {
+	#if sys
+
 	/** Generate a select query on a given model. **/
 	public static macro function generateSelect( model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):ExprOf<String> {
 		return prepareSelectQuery( model, rest ).generateSelectQuery();
@@ -27,6 +29,8 @@ class QueryBuilder {
 			([for (r in resultSet) r]:Array<$complexType>);
 		}
 	}
+
+	#end
 
 	#if (macro)
 
