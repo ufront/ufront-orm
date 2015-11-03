@@ -114,7 +114,7 @@ class ManyToMany<A:Object, B:Object> {
 	public function new(aObject:A, bClass:Class<B>, ?initialise=true) {
 		if ( aObject==null )
 			throw 'Error creating ManyToMany: aObject must not be null';
-		
+
 		this.aObject = aObject;
 		this.b = bClass;
 		#if server
@@ -129,7 +129,7 @@ class ManyToMany<A:Object, B:Object> {
 			else {
 				this.bList = new List();
 				this.bListIDs = new List();
-			} 
+			}
 		#else
 			this.bList = new List();
 			this.bListIDs = new List();
@@ -192,7 +192,7 @@ class ManyToMany<A:Object, B:Object> {
 			arr.unshift("_join");
 			return arr.join('_');
 		}
-		
+
 		/**
 			Create a join table for the two classes if it does not exist already.
 		**/
@@ -205,7 +205,7 @@ class ManyToMany<A:Object, B:Object> {
 
 		/**
 			A function to at once retrieve the related IDs of several objects.
-			
+
 			@param aModel The model for the object IDs you have
 			@param bModel The model the the related object IDs you want to fetch
 			@param aObjectIDs The specific models you want to get.  If not supplied, we'll get a map of ALL manyToMany relationships between these two models.
@@ -271,12 +271,12 @@ class ManyToMany<A:Object, B:Object> {
 				bList = bManager.unsafeObjects( 'SELECT * FROM $bTableName WHERE '+Manager.quoteList('id',bListIDs), false );
 			else
 				bList = new List();
-			
+
 			for ( newObj in unsavedBObjects ) {
 				this.bList.add( newObj );
 			}
 		}
-		
+
 		/**
 			Resolves any differences between the joins represented here and the joins in the database.
 			Most actions (`add`, `remove`, `setList` etc) apply to the database immediately if a) we're on the server and b) both objects have an ID.
@@ -325,7 +325,7 @@ class ManyToMany<A:Object, B:Object> {
 
 	/**
 		Remove the relationship/join between our `aObject` and a particular `bObject`.
-		
+
 		If `bObject` is null this will have no effect.
 		If `aObject` or `bObject` have no ID, then the `bObject` will be removed from the local list, but no database query will be executed.
 	**/
@@ -391,5 +391,3 @@ class ManyToMany<A:Object, B:Object> {
 		return bList.length;
 	}
 }
-
-
