@@ -28,8 +28,8 @@ class DBMacros
 				}
 			}
 		});
-		
-		// DCE can sometimes cause Bytes.toString() to not be compiled, which causes issues when working with SData.  
+
+		// DCE can sometimes cause Bytes.toString() to not be compiled, which causes issues when working with SData.
 		// This is a workaround.
 		Compiler.addMetadata( "@:keep", "haxe.io.Bytes", "toString", false );
 		return fields;
@@ -249,7 +249,7 @@ class DBMacros
 					var hasSkip = f.meta.has(":skip");
 					var hasInclude = f.meta.has(":includeInSerialization");
 					var thisFieldIsNotSkipped = (hasSkip==false || hasInclude);
-					
+
 					switch (f) {
 						case { kind: FVar(AccNormal, AccNormal) }:
 							// Serialize anything that would usually be saved to the database.
@@ -258,22 +258,22 @@ class DBMacros
 						case { kind: FVar(AccCall,_), type: fieldType }:
 							// If it's Null<T>, let's work on the <T> bit...
 							switch fieldType {
-								case TType(_.get() => defType,params) if (defType.name=="Null" || defType.name=="SNull"): 
+								case TType(_.get() => defType,params) if (defType.name=="Null" || defType.name=="SNull"):
 									fieldType = params[0];
 								default:
 							}
-				
+
 							// If it's SData or SEnum, include it in our serialization
 							switch fieldType {
-								case TType(_.get() => defType,params) if (defType.name=="SData"): 
+								case TType(_.get() => defType,params) if (defType.name=="SData"):
 									serializeFields.push(f.name);
-								case TType(_.get() => defType,params) if (defType.name=="SEnum"): 
+								case TType(_.get() => defType,params) if (defType.name=="SEnum"):
 									serializeFields.push(f.name);
 								case TEnum(enumRef, params):
 									serializeFields.push(f.name);
 								default:
 							}
-							
+
 							// If it's a relationship, add the related metadata.
 							function getClassNameOfTypeParam( t:Type ) {
 								return switch t {
@@ -291,9 +291,8 @@ class DBMacros
 									relationFields.push( '${f.name},HasMany,${getClassNameOfTypeParam(params[0])},${getRelationKeyForField(currentClass.name,f)}' );
 								case TInst(_.get() => classType,params) if (classType.name=="ManyToMany" && thisFieldIsNotSkipped):
 									relationFields.push('${f.name},ManyToMany,${getClassNameOfTypeParam(params[1])}');
-									serializeFields.push("ManyToMany" + f.name);
 								default:
-							} 
+							}
 						default:
 					}
 				}
@@ -301,9 +300,9 @@ class DBMacros
 				currentClass = (currentClass.superClass!=null) ? currentClass.superClass.t.get() : null;
 			}
 
-			// Create @ufSerialize() metadata for knowing which fields to serialize.
+			// Create @hxSerializationFields() metadata for knowing which fields to serialize.
 			var meta = localClass.meta;
-			var serializeMetaName = "ufSerialize";
+			var serializeMetaName = "hxSerializationFields";
 			if ( meta.has(serializeMetaName) )
 				meta.remove( serializeMetaName );
 			var serializeFieldExprs = [for (str in serializeFields) macro $v{str}];
@@ -483,7 +482,7 @@ class DBMacros
 					f.meta.push({ name:":isVar", params:null, pos:f.pos });
 				case _: error('On field `${f.name}`: HasMany can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// Values needed for reification of fields.
 			var modelTypeSig:ComplexType = TPath(modelType);
 			var iterableTypeSig:ComplexType = macro :List<$modelTypeSig>;
@@ -494,7 +493,7 @@ class DBMacros
 			var relationKey = getRelationKeyForField(Context.getLocalClass().get().name,f);
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
-			
+
 			// Use reification to create the private field, the getter and the setter.
 			var fieldsToAdd = macro class {
 				private function $getterName():List<$modelTypeSig> {
@@ -552,7 +551,7 @@ class DBMacros
 					f.meta.push({ name:":isVar", params:null, pos:f.pos });
 				case _: error('On field `${f.name}`: HasOne can only be used with a normal var, not a property or a function.', f.pos);
 			};
-			
+
 			// Values needed for reification of fields.
 			var privateName = f.name;
 			var privateIdent = privateName.resolve();
@@ -561,7 +560,7 @@ class DBMacros
 			var relationKey = getRelationKeyForField(Context.getLocalClass().get().name,f);
 			var modelPath = nameFromTypePath(modelType);
 			var model = modelPath.resolve();
-			
+
 			// Use reification to create the private field, the getter and the setter.
 			var fieldsToAdd = macro class {
 				private function $getterName():$modelTypeSig {

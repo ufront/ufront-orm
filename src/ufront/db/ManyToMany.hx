@@ -119,7 +119,7 @@ class ManyToMany<A:Object, B:Object> {
 		this.b = bClass;
 		#if server
 			this.a = Type.getClass(aObject);
-			bManager = untyped bClass.manager;
+			this.bManager = new Manager( bClass );
 			this.tableName = generateTableName(a,b);
 			this.manager = getManager(tableName);
 			this.unsavedBObjects = new List();
@@ -380,6 +380,87 @@ class ManyToMany<A:Object, B:Object> {
 		// And add new ones
 		for (b in newBList) {
 			add(b);
+		}
+	}
+
+	/**
+	If set to true, it will serialize only the IDs of any saved B objects, so the server can retrieve them.
+
+	This can save you from sending the entire list of objects in a remoting request if you are only interested in *which* objects are in the list, rather than the contents of each object.
+
+	Please note a `ManyToMany` object serialized with `useCompactSerialization` can only be unserialized on the server when a database connection is present.
+	**/
+	public var useCompactSerialization:Bool = false;
+
+	/**
+	Custom serialization.
+
+	- Serialize `useCompactSerialization`.
+	- Serialize the class names for `a` and `b`.
+	- If `useCompactSerialization` is true, serialize `a.id`, `bListIDs` and `unsavedBObjects`
+	- If `useCompactSerialization` is false, serialize `a` and `bList`
+	- It will set `Serializer.useEnumIndex=true` and `Serializer.useCache=true`.
+	**/
+	public function hxSerialize( s:haxe.Serializer ) {
+		s.useEnumIndex = true;
+		s.useCache = true;
+		s.serialize( useCompactSerialization );
+		s.serialize( Type.getClassName(a) );
+		s.serialize( Type.getClassName(b) );
+		if ( useCompactSerialization ) {
+			s.serialize( aObject.id );
+			s.serialize( bListIDs );
+			s.serialize( unsavedBObjects );
+		}
+		else {
+			s.serialize( a );
+			s.serialize( bList );
+		}
+	}
+
+	/**
+	Custom unserialization to match `hxSerialize`.
+
+	If the object had been serialized with `useCompactSerialization`, it will attempt to fetch the related objects from the database based on their serialized IDs.
+	This will throw an error if deserialization of an object with `useCompactSerialization` occurs on the client or when there is no database connection.
+	**/
+	public function hxUnserialize( s:haxe.Unserializer ) {
+		this.useCompactSerialization = s.unserialize();
+		var aClassName = s.unserialize();
+		var bClassName = s.unserialize();
+		this.a = cast Type.resolveClass( aClassName );
+		this.b = cast Type.resolveClass( bClassName );
+		#if server
+			this.tableName = generateTableName( a, b );
+			this.manager = getManager( tableName );
+			this.bManager = new Manager( b );
+		#end
+		if ( useCompactSerialization ) {
+			var aObjectID:Int = s.unserialize();
+			this.bListIDs = s.unserialize();
+			this.unsavedBObjects = s.unserialize();
+			// Fetch the objects from the DB based on their IDs.
+			#if server
+				this.aObject = new Manager( a ).unsafeGet( aObjectID );
+				var bTableName = @:privateAccess bManager.table_name;
+				// this.bList = bManager.search( $id in bListIDs );
+				this.bList = bManager.unsafeObjects("SELECT * FROM `" + bTableName + "` WHERE " + Manager.quoteList('id', bListIDs), false);
+				for ( b in unsavedBObjects ) {
+					this.bList.add( b );
+				}
+			#else
+				throw 'Unable to deserialize ManyToMany for $aClassName[$aObjectID] / $bClassName: it was serialized with useCompactSerialization, and so can only be unserialized on the server.';
+			#end
+		}
+		else {
+			this.aObject = s.unserialize();
+			this.bList = s.unserialize();
+			this.bListIDs = new List();
+			this.unsavedBObjects = new List();
+			for ( b in bList ) {
+				if ( b!=null ) bListIDs.add( b.id );
+				else unsavedBObjects.add( b );
+			}
 		}
 	}
 
