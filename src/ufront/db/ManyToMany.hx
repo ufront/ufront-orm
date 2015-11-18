@@ -114,7 +114,7 @@ class ManyToMany<A:Object, B:Object> {
 	public function new(aObject:A, bClass:Class<B>, ?initialise=true) {
 		if ( aObject==null )
 			throw 'Error creating ManyToMany: aObject must not be null';
-		
+
 		this.aObject = aObject;
 		this.b = bClass;
 		#if server
@@ -129,7 +129,7 @@ class ManyToMany<A:Object, B:Object> {
 			else {
 				this.bList = new List();
 				this.bListIDs = new List();
-			} 
+			}
 		#else
 			this.bList = new List();
 			this.bListIDs = new List();
@@ -137,14 +137,52 @@ class ManyToMany<A:Object, B:Object> {
 		#end
 	}
 
-	public inline function first() return bList.first();
-	public inline function isEmpty() return bList.isEmpty();
-	public inline function join(sep) return bList.join(sep);
-	public inline function last() return bList.last();
-	public inline function iterator() return bList.iterator();
-	public inline function filter(predicate) return bList.filter(predicate);
-	public inline function map(fn) return bList.map(fn);
-	public inline function toString() return bList.toString();
+	/**
+	Fetch a list of all related `B` objects.
+
+	This will be a list combining both saved and unsaved `B` objects.
+	**/
+	public function toList():List<B> {
+		var list = new List();
+		for ( b in bList ) list.add( b );
+		for ( b in unsavedBObjects ) list.add( b );
+		return list;
+	}
+
+	/**
+	Check if a certain object is in the list of related objects.
+
+	Objects will be matched based on ID, rather than physical equality.
+	**/
+	public function has( bObject:B ):Bool {
+		for ( b in bList ) if ( b.id==bObject.id ) return true;
+		for ( b in unsavedBObjects ) if ( b.id==bObject.id ) return true;
+		return false;
+	}
+
+	/** Get the first related `B` object. **/
+	public inline function first() return toList().first();
+
+	/** Check if the list of related `B` objects is empty. **/
+	public inline function isEmpty() return toList().isEmpty();
+
+	/** Join the related `B` objects into a string. **/
+	public inline function join(sep) return toList().join(sep);
+
+	/** Get the last related `B` object. **/
+	public inline function last() return toList().last();
+
+	/** Return an `Iterator` for all related `B` objects. **/
+	public inline function iterator() return toList().iterator();
+
+	/** Return a `List` of all related `B` objects that match the given filter. **/
+	public inline function filter(predicate) return toList().filter(predicate);
+
+	/** Return a `List` after transforming related `B` objects with the given function. **/
+	public inline function map(fn) return toList().map(fn);
+
+	/** Return a string representation of all related `B` objects. **/
+	public inline function toString() return toList().toString();
 
 	#if server
 		@:access(sys.db.Manager)
@@ -192,7 +230,7 @@ class ManyToMany<A:Object, B:Object> {
 			arr.unshift("_join");
 			return arr.join('_');
 		}
-		
+
 		/**
 			Create a join table for the two classes if it does not exist already.
 		**/
@@ -205,7 +243,7 @@ class ManyToMany<A:Object, B:Object> {
 
 		/**
 			A function to at once retrieve the related IDs of several objects.
-			
+
 			@param aModel The model for the object IDs you have
 			@param bModel The model the the related object IDs you want to fetch
 			@param aObjectIDs The specific models you want to get.  If not supplied, we'll get a map of ALL manyToMany relationships between these two models.
@@ -271,12 +309,12 @@ class ManyToMany<A:Object, B:Object> {
 				bList = bManager.unsafeObjects( 'SELECT * FROM $bTableName WHERE '+Manager.quoteList('id',bListIDs), false );
 			else
 				bList = new List();
-			
+
 			for ( newObj in unsavedBObjects ) {
 				this.bList.add( newObj );
 			}
 		}
-		
+
 		/**
 			Resolves any differences between the joins represented here and the joins in the database.
 			Most actions (`add`, `remove`, `setList` etc) apply to the database immediately if a) we're on the server and b) both objects have an ID.
@@ -325,7 +363,7 @@ class ManyToMany<A:Object, B:Object> {
 
 	/**
 		Remove the relationship/join between our `aObject` and a particular `bObject`.
-		
+
 		If `bObject` is null this will have no effect.
 		If `aObject` or `bObject` have no ID, then the `bObject` will be removed from the local list, but no database query will be executed.
 	**/
@@ -472,5 +510,3 @@ class ManyToMany<A:Object, B:Object> {
 		return bList.length;
 	}
 }
-
-
