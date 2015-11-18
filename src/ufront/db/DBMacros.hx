@@ -634,6 +634,10 @@ class DBMacros
 			else
 			{
 				getterBody = macro {
+					if ($ident == null)
+					{
+						$ident = new ManyToMany( this, $bModelIdent );
+					}
 					if ($ident.bList == null)
 					{
 						$ident.bList = new List();
