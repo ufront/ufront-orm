@@ -137,14 +137,52 @@ class ManyToMany<A:Object, B:Object> {
 		#end
 	}
 
-	public inline function first() return bList.first();
-	public inline function isEmpty() return bList.isEmpty();
-	public inline function join(sep) return bList.join(sep);
-	public inline function last() return bList.last();
-	public inline function iterator() return bList.iterator();
-	public inline function filter(predicate) return bList.filter(predicate);
-	public inline function map(fn) return bList.map(fn);
-	public inline function toString() return bList.toString();
+	/**
+	Fetch a list of all related `B` objects.
+
+	This will be a list combining both saved and unsaved `B` objects.
+	**/
+	public function toList():List<B> {
+		var list = new List();
+		for ( b in bList ) list.add( b );
+		for ( b in unsavedBObjects ) list.add( b );
+		return list;
+	}
+
+	/**
+	Check if a certain object is in the list of related objects.
+
+	Objects will be matched based on ID, rather than physical equality.
+	**/
+	public function has( bObject:B ):Bool {
+		for ( b in bList ) if ( b.id==bObject.id ) return true;
+		for ( b in unsavedBObjects ) if ( b.id==bObject.id ) return true;
+		return false;
+	}
+
+	/** Get the first related `B` object. **/
+	public inline function first() return toList().first();
+
+	/** Check if the list of related `B` objects is empty. **/
+	public inline function isEmpty() return toList().isEmpty();
+
+	/** Join the related `B` objects into a string. **/
+	public inline function join(sep) return toList().join(sep);
+
+	/** Get the last related `B` object. **/
+	public inline function last() return toList().last();
+
+	/** Return an `Iterator` for all related `B` objects. **/
+	public inline function iterator() return toList().iterator();
+
+	/** Return a `List` of all related `B` objects that match the given filter. **/
+	public inline function filter(predicate) return toList().filter(predicate);
+
+	/** Return a `List` after transforming related `B` objects with the given function. **/
+	public inline function map(fn) return toList().map(fn);
+
+	/** Return a string representation of all related `B` objects. **/
+	public inline function toString() return toList().toString();
 
 	#if server
 		@:access(sys.db.Manager)
