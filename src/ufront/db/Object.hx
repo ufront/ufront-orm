@@ -293,8 +293,10 @@ class Object #if server extends sys.db.Object #end {
 	@:skip @:isVar public var hxSerializationFields(get,set):Array<String>;
 
 	function get_hxSerializationFields():Array<String> {
-		if ( hxSerializationFields==null )
-			hxSerializationFields = cast Meta.getType(Type.getClass(this)).hxSerializationFields;
+		if ( hxSerializationFields==null ) {
+			var arr:Array<String> = cast Meta.getType(Type.getClass(this)).hxSerializationFields;
+			hxSerializationFields = arr.copy();
+		}
 		return hxSerializationFields;
 	}
 
