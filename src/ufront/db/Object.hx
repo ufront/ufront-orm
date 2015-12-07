@@ -284,11 +284,13 @@ class Object #if server extends sys.db.Object #end {
 	/**
 	An Array of all the properties that should be incuded in serialization of this object.
 
-	By default, the values are pulled from the `@hxSerializationFields`, which is set by the build macro.
+	By default, the values are pulled from the `@hxSerializationFields` metadata, which is set by the build macro.
 	It will include all variables or properties that are saved to the database, meaning those that do not have `@:skip` metadata.
 	If you would like to serialize a field that has `@:skip` metadata, you can include `@:includeInSerialization` metadata on the field.
 
 	Relationships are not included in the serialization by default.
+
+	To quickly and safely change the fields that will be included in serialization, see `DBSerializationTools`.
 	**/
 	@:skip @:isVar public var hxSerializationFields(get,set):Array<String>;
 
