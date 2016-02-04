@@ -22,6 +22,7 @@ class TestSerialization extends DBTestClass {
 		recreateTable( Profile.manager );
 		recreateTable( BlogPost.manager );
 		recreateTable( Tag.manager );
+		recreateJoinTable( BlogPost, Tag );
 
 		tag1 = new Tag();
 		tag1.url = "coffee";
