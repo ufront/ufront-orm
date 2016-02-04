@@ -48,6 +48,9 @@ You can specify with clarity exactly which properties should be included when se
 
 These macros work by changing the values in `ufront.db.Object.hxSerializationFields`, but add a much more concise syntax and type safety guarantees.
 
+Please note, when adding a field to be serialized, that field will be accessed at the time the `with()` call is made.
+So if that field is a property that supports caching (such as Ufront-ORM BelongsTo and HasMany relationships), the property will be cached when this macro is called, rather than when the object is serialized.
+
 ### Usage
 
 ```haxe
@@ -132,6 +135,8 @@ class DBSerializationTools {
 		var fields = macro @:pos(obj.pos) $obj.hxSerializationFields;
 		function addField( propertyName:String ) {
 			var expr = macro if ($fields.indexOf($v{propertyName})==-1) $fields.push( $v{propertyName} );
+			var getterCall = macro $obj.$propertyName;
+			blockExpressions.push( getterCall );
 			blockExpressions.push( expr );
 		}
 		function removeField( propertyName:String ) {
