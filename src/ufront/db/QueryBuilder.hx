@@ -461,6 +461,16 @@ class QueryBuilder {
 				case macro $i{_.substr(1) => colName} if (exprIsColumn(expr)):
 					getColumn( [colName], expr.pos );
 					return macro $v{colName};
+				case macro $col in $iterable:
+					return quoteList( printWhereExpr(col), iterable, expr.pos );
+				case macro if ($cond) $trueOption else $falseOption, macro $cond ? $trueOption : $falseOption:
+					if ( falseOption==null )
+						falseOption = macro true;
+					var printedTrueOption = printWhereExpr( trueOption );
+					var printedFalseOption = printWhereExpr( falseOption );
+					return macro ( $cond ? $printedTrueOption : $printedFalseOption );
+				case macro true, macro false:
+					return quoteExpr( expr );
 				case _:
 
 			}
@@ -479,6 +489,10 @@ class QueryBuilder {
 			case macro false: macro "FALSE";
 			default: macro sys.db.Manager.quoteAny( $e );
 		}
+	}
+
+	function quoteList( column:ExprOf<String>, iterable:ExprOf<Iterable<Dynamic>>, p:Position ) {
+		return macro @:pos(p) sys.db.Manager.quoteList( $column, $iterable );
 	}
 
 	function generateOrderBy():Expr {
