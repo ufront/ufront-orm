@@ -105,21 +105,23 @@ class QueryBuilder {
 		switch Context.typeof( this.originalExprs.from ) {
 			case TType(_.get() => tdef, []) if (tdef.name.startsWith("Class<") && tdef.name.endsWith(">")):
 				var typeName = tdef.name.substring("Class<".length, tdef.name.length-1);
-				this.table = getTableInfoFromType( Context.getType(typeName), this.originalExprs.from.pos );
+				this.table = getTableInfoFromType( Context.getType(typeName), null, this.originalExprs.from.pos );
 			case other:
 				this.originalExprs.from.reject( 'Should be called on a Class<sys.db.Object>, but was $other' );
 		}
 	}
 
-	function getTableInfoFromType( t:Type, pos:Position ):SelectTable {
+	function getTableInfoFromType( t:Type, alias:Null<String>, pos:Position ):SelectTable {
 		var modelTable = {
 			name:null,
+			alias:null,
 			model:null,
 			fields:new Map()
 		};
 		switch t {
 			case TInst(_.get() => classType, []):
 				modelTable.name = getTableNameFromClassType( classType );
+				modelTable.alias = (alias!=null) ? alias : modelTable.name;
 				modelTable.model = classType;
 				addFieldsFromClassTypeToTable( classType, modelTable );
 			case _:
@@ -146,22 +148,22 @@ class QueryBuilder {
 			}
 			else {
 				// Add any fields which are related tables (joins)
-				function addJoinField( relatedModel:Type, joinType:JoinType ) {
-					var relatedTable = Lazy.ofFunc( getTableInfoFromType.bind(relatedModel,classField.pos) );
+				function addJoinField( relatedModel:Type, joinType:JoinType, alias:String ) {
+					var relatedTable = Lazy.ofFunc( getTableInfoFromType.bind(relatedModel,alias,classField.pos) );
 					var joinDescription = { relatedTable:relatedTable, usedInQuery:false, type:joinType };
 					modelTable.fields.set( classField.name, Right(joinDescription) );
 				}
 				switch classField.type {
 					case TType(_.get() => { module:"ufront.db.Object", name:"HasOne" }, [relatedModel]):
 						var relationKey = DBMacros.getRelationKeyForField( modelTable.model.name, classField );
-						addJoinField( relatedModel, JTHasOne(relationKey) );
+						addJoinField( relatedModel, JTHasOne(relationKey), modelTable.alias+"_"+classField.name );
 					case TType(_.get() => { module:"ufront.db.Object", name:"HasMany" }, [relatedModel]):
 						var relationKey = DBMacros.getRelationKeyForField( modelTable.model.name, classField );
-						addJoinField( relatedModel, JTHasMany(relationKey) );
+						addJoinField( relatedModel, JTHasMany(relationKey), modelTable.alias+"_"+classField.name );
 					case TType(_.get() => { module:"ufront.db.Object", name:"BelongsTo" }, [relatedModel]):
-						addJoinField( relatedModel, JTBelongsTo );
+						addJoinField( relatedModel, JTBelongsTo, modelTable.alias+"_"+classField.name );
 					case TType(_.get() => { module:"ufront.db.ManyToMany", name:"ManyToMany" }, [_,relatedModel]):
-						addJoinField( relatedModel, JTManyToMany );
+						addJoinField( relatedModel, JTManyToMany, modelTable.alias+"_"+classField.name );
 					case TType(_, _):
 						// TODO: follow typedefs recursively to see if there is a typedef to one of the above relation types.
 					case _:
@@ -247,7 +249,7 @@ class QueryBuilder {
 		var selectTable = colPair.a;
 		var classField = colPair.b;
 		field.type = Left( classField.type );
-		field.resultSetField = '${selectTable.name}.${classField.name}';
+		field.resultSetField = '${selectTable.alias}.${classField.name}';
 	}
 
 	/**
@@ -286,7 +288,7 @@ class QueryBuilder {
 					var pair = getColumn( [columnName], field.pos );
 					var table = pair.a;
 					var field = pair.b;
-					{ column:Left({ table:table.name, column:field.name }), direction:direction };
+					{ column:Left({ table:table.alias, column:field.name }), direction:direction };
 				case macro $expr:
 					// It is probably a runtime expression, we'll ask the compiler to check it is a String.
 					{ column:Right(macro @:pos(expr.pos) ($expr:String)), direction:direction };
@@ -366,14 +368,14 @@ class QueryBuilder {
 					switch join.type {
 						case JTHasOne(relKey):
 							var relatedTable = join.relatedTable.get();
-							var joinStatement = 'JOIN ${relatedTable.name} ON ${relatedTable.name}.${relKey} = ${currentTable.name}.id';
+							var joinStatement = 'JOIN ${relatedTable.name} ${relatedTable.alias} ON ${relatedTable.alias}.${relKey} = ${currentTable.alias}.id';
 							tableAndJoins = '$tableAndJoins $joinStatement';
 							tableAndJoins = addJoins( tableAndJoins, relatedTable );
 						case JTHasMany(relKey):
 							throw "HasMany Joins are not supported yet";
 						case JTBelongsTo:
 							var relatedTable = join.relatedTable.get();
-							var joinStatement = 'JOIN ${relatedTable.name} ON ${relatedTable.name}.id = ${currentTable.name}.${fieldName}ID';
+							var joinStatement = 'JOIN ${relatedTable.name} ${relatedTable.alias} ON ${relatedTable.alias}.id = ${currentTable.alias}.${fieldName}ID';
 							tableAndJoins = '$tableAndJoins $joinStatement';
 							tableAndJoins = addJoins( tableAndJoins, relatedTable );
 						case JTManyToMany:
@@ -545,6 +547,7 @@ class QueryBuilder {
 
 typedef SelectTable = {
 	name:String,
+	alias:String,
 	model:ClassType,
 	fields:Map<String,Either<ClassField,JoinDescription>>
 }
