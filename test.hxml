@@ -11,6 +11,7 @@
 # Things need for tests
 -lib compiletime
 -lib utest
+-lib ufront-mvc
 -cp test
 
 --each
