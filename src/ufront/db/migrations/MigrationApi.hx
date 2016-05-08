@@ -13,15 +13,28 @@ A separate `MigrationCreationApi` is used to create Migration classes based on t
 **/
 class MigrationApi extends UFApi {
 
-	/** Read the `uf_migrations` table to and get an array of all migrations that have been run up. **/
+	/** Read the `uf_migration` table to and get an array of all migrations that have been run up. **/
 	public function getMigrationsFromDB():Array<Migration> {
-		return Migration.manager.all().array();
+		return sortMigrations( Migration.manager.all().array() );
 	}
 
-	/** Get an array of all Migrations required for the current code state, by finding every `Migration` class in the `migrations` package. **/
+	/** Get an array of all Migrations required for the current code state, by finding every `Migration` class in the `db.migrations` package. **/
 	public function getMigrationsInCode():Array<Migration> {
-		var migrationClasses = CompileTime.getAllClasses( "migrations", Migration );
-		return [for (m in migrationClasses) Type.createInstance(m,[]) ];
+		CompileTime.importPackage( "db.migrations" );
+		var migrationClasses = CompileTime.getAllClasses( "db.migrations", Migration );
+		var migrations = [for (m in migrationClasses) Type.createInstance(m,[]) ];
+		return sortMigrations( migrations );
+	}
+
+
+	/** Retrieve a single migration that has been run up in the database, by its ID. **/
+	public function getMigrationFromDB( id:String ):Migration {
+		return Migration.manager.select( $migrationID==id );
+	}
+
+	/** Retrieve a single migration from the current code base, by its ID. **/
+	public function getMigrationInCode( id:String ):Migration {
+		return getMigrationsInCode().find( function(m) return m.migrationID==id );
 	}
 
 	/** Generate a `DBSchema` based on the current migrations found in `getMigrationsFromDB()`. **/
@@ -53,7 +66,7 @@ class MigrationApi extends UFApi {
 		var requiredMigrations = {
 			down: [],
 			up: [],
-			autoDown: false,
+			autoDown: true,
 		}
 		for ( migInDB in migrationsRunOnDB ) {
 			var migrationExistsInCode = migrationsInCode.exists( function(migInCode) return migInCode.migrationID==migInDB.migrationID );
@@ -102,7 +115,7 @@ class MigrationApi extends UFApi {
 	/**
 	Transform a schema by applying migrations.
 
-	@param existingSchema The schema we begin with. If you want to start from scratch, provide a blank array.
+	@param existingSchema The schema we begin with. If you want to start from scratch, provide an empty array.
 	@param migrations The migrations that are to be applied.
 	@param migrationDirection The direction the migrations should be applied: Up or Down.
 	@return A new `DBSchema` array that represents the DB schema after the migrations have been applied. The original schema object will not be changed.
@@ -131,6 +144,10 @@ class MigrationApi extends UFApi {
 			}
 		}
 		return schema;
+	}
+	static function sortMigrations( migrations:Array<Migration> ):Array<Migration> {
+		migrations.sort( function(m1,m2) return Reflect.compare(m1.migrationID,m2.migrationID) );
+		return migrations;
 	}
 	static function getTableInSchema( schema:DBSchema, tableName:String ):Null<DBTable> {
 		return schema.find( function(dbTable) return dbTable.tableName==tableName );
@@ -245,8 +262,8 @@ class MigrationApi extends UFApi {
 		return manager.dbInfos().name;
 	}
 	static function sortModelsByJoinOrder( c1:Class<Dynamic>, c2:Class<Dynamic> ):Int {
-		var name1 = Type.getClassName(c1).split('.').pop();
-		var name2 = Type.getClassName(c2).split('.').pop();
+		var name1 = Type.getClassName( c1 ).split( '.' ).pop();
+		var name2 = Type.getClassName( c2 ).split( '.' ).pop();
 		return Reflect.compare( name1, name2 );
 	}
 	static function getJoinTableDescription( modelAName:String, modelBName:String ):DBTable {

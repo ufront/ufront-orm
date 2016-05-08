@@ -70,13 +70,21 @@ A `Migration` that should be run (or has been run) on the database.
 - When a Migration row exists in the database, but not the code, it means this migration must be run "down" when syncing the database.
 - If the Migration exists both as an object in the code and a row in the database, it means the migration has been run "up" already, and this migration is in sync.
 
-Migration objects should be created by subclassing, and the sub-classes should appear in the "migrations" package or a sub-package:
+When creating a migration:
+
+- Your migration is defined as a class that extends `ufront.db.Migration`.
+- Your migration class should be in the `db.migrations` package or a sub-package.
+- The class name should have the format `M${date}_${description}`
+  The date should be in the format `yyyyMMddhhmmss`.
+  The date will be used to apply the migrations in the correct order.
+- By the end of the constructor, the `actions` array should be populated.
+  The easiest way to do this is to pass an array to the super constructor: `super([ action1, action2 ])`.
+- The constructor for your migration should not accept or require any function arguments.
 
 ```
-package migrations.my.app;
+package db.migrations.my.app;
 
-class 20151028152503_AddEmailFieldToProfile extends Migration {
-	// Constructor must take no arguments and call super function.
+class M20151028152503_AddEmailFieldToProfile extends Migration {
 	public function new() {
 		super([
 			AddField( "UserProfile", { name:"email", type: DString(255) } )
@@ -86,10 +94,13 @@ class 20151028152503_AddEmailFieldToProfile extends Migration {
 ```
 
 **/
+@:autoBuild( ufront.db.migrations.MigrationMacros.migrationBuild() )
+@:table("uf_migration")
+@:index(migrationID,unique)
 class Migration extends Object {
 	/**
 	The actions that are run as part of this migration.
-	By storing these in the database, we can roll them backwards even if that code no longer exists in the database.
+	By storing these in the database, we can roll them backwards even if that migration no longer exists in the runtime version of the code.
 	Please note that if you're trying to roll back a `CustomMigrationCode` action, you'll need to do it *while the code exists*, so before changing branches etc.
 	**/
 	public var actions(default,null):SData<Array<MigrationAction>>;
