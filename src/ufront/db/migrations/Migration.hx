@@ -1,6 +1,5 @@
 package ufront.db.migrations;
 
-#if sys
 import sys.db.Types;
 import sys.db.RecordInfos.RecordType;
 
@@ -115,4 +114,3 @@ class Migration extends Object {
 		this.actions = actions;
 	}
 }
-#end

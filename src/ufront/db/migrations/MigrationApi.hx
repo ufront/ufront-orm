@@ -1,9 +1,10 @@
 package ufront.db.migrations;
 
-#if sys
-import sys.db.Manager;
 import ufront.db.migrations.Migration;
 import ufront.MVC;
+#if sys
+	import sys.db.Manager;
+#end
 using tink.CoreApi;
 using Lambda;
 /**
@@ -333,4 +334,3 @@ class MigrationApi extends UFApi {
 		}
 	}
 }
-#end
