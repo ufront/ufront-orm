@@ -131,7 +131,7 @@ class MigrationApi extends UFApi {
 		return schema;
 	}
 
-	static function copyExistingSchema( existingSchema:DBSchema ):DBSchema {
+	public static function copyExistingSchema( existingSchema:DBSchema ):DBSchema {
 		var schema = [];
 		if ( existingSchema!=null ) {
 			for ( table in existingSchema ) {
@@ -146,17 +146,17 @@ class MigrationApi extends UFApi {
 		}
 		return schema;
 	}
-	static function sortMigrations( migrations:Array<Migration> ):Array<Migration> {
+	public static function sortMigrations( migrations:Array<Migration> ):Array<Migration> {
 		migrations.sort( function(m1,m2) return Reflect.compare(m1.migrationID,m2.migrationID) );
 		return migrations;
 	}
-	static function getTableInSchema( schema:DBSchema, tableName:String ):Null<DBTable> {
+	public static function getTableInSchema( schema:DBSchema, tableName:String ):Null<DBTable> {
 		return schema.find( function(dbTable) return dbTable.tableName==tableName );
 	}
-	static function getFieldInTable( table:DBTable, fieldName:String ):Null<DBColumn> {
+	public static function getFieldInTable( table:DBTable, fieldName:String ):Null<DBColumn> {
 		return table.fields.find( function(column) return column.name==fieldName );
 	}
-	static function addTableToSchema( schema:DBSchema, table:DBTable ):Void {
+	public static function addTableToSchema( schema:DBSchema, table:DBTable ):Void {
 		var existing = getTableInSchema( schema, table.tableName );
 		if ( existing!=null )
 			throw 'Failed to add table to schema: table ${table.tableName} already existed';
@@ -167,13 +167,13 @@ class MigrationApi extends UFApi {
 			foreignKeys: table.foreignKeys
 		});
 	}
-	static function removeTableFromSchema( schema:DBSchema, name:String ):Void {
+	public static function removeTableFromSchema( schema:DBSchema, name:String ):Void {
 		var existing = getTableInSchema( schema, name );
 		if ( existing==null )
 			throw 'Failed to drop table from schema: table $name did not exist';
 		schema.remove( existing );
 	}
-	static function addFieldToSchema( schema:DBSchema, tableName:String, column:DBColumn ):Void {
+	public static function addFieldToSchema( schema:DBSchema, tableName:String, column:DBColumn ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to add field to schema: table $tableName did not exist';
@@ -183,10 +183,10 @@ class MigrationApi extends UFApi {
 		existingTable.fields.push({
 			name: column.name,
 			type: column.type,
-			isNull: column.isNull,
+			isNullable: column.isNullable,
 		});
 	}
-	static function modifyFieldInSchema( schema:DBSchema, tableName:String, before:DBColumn, after:DBColumn ):Void {
+	public static function modifyFieldInSchema( schema:DBSchema, tableName:String, before:DBColumn, after:DBColumn ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to modify field in schema: table $tableName did not exist';
@@ -196,7 +196,7 @@ class MigrationApi extends UFApi {
 		existingField.name = after.name;
 		existingField.type = after.type;
 	}
-	static function removeFieldFromSchema( schema:DBSchema, tableName:String, field:DBColumn ):Void {
+	public static function removeFieldFromSchema( schema:DBSchema, tableName:String, field:DBColumn ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to remove field from schema: table $tableName did not exist';
@@ -205,12 +205,12 @@ class MigrationApi extends UFApi {
 			throw 'Failed to remove field from schema: Column ${field.name} on table $tableName did not exist';
 		existingTable.fields.remove( existingField );
 	}
-	static function getIndexInTable( table:DBTable, index:DBIndex ):Null<DBIndex> {
+	public static function getIndexInTable( table:DBTable, index:DBIndex ):Null<DBIndex> {
 		return table.indicies.find( function(i) {
 			return '${i.fields}${i.unique}' == '${index.fields}${index.unique}';
 		});
 	}
-	static function addIndexToSchema( schema:DBSchema, tableName:String, index:DBIndex ):Void {
+	public static function addIndexToSchema( schema:DBSchema, tableName:String, index:DBIndex ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to add index to schema: table $tableName did not exist';
@@ -222,7 +222,7 @@ class MigrationApi extends UFApi {
 			unique: index.unique
 		});
 	}
-	static function removeIndexFromSchema( schema:DBSchema, tableName:String, index:DBIndex ):Void {
+	public static function removeIndexFromSchema( schema:DBSchema, tableName:String, index:DBIndex ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to remove index from schema: table $tableName did not exist';
@@ -231,12 +231,12 @@ class MigrationApi extends UFApi {
 			throw 'Failed to remove index from schema: No such index existed';
 		existingTable.indicies.remove( existingIndex );
 	}
-	static function getForeignKeyInTable( table:DBTable, foreignKey:DBForeignKey ):Null<DBForeignKey> {
+	public static function getForeignKeyInTable( table:DBTable, foreignKey:DBForeignKey ):Null<DBForeignKey> {
 		return table.foreignKeys.find( function(fk) {
 			return '${fk.fields}${fk.relatedTableName}' == '${foreignKey.fields}${foreignKey.relatedTableName}';
 		});
 	}
-	static function addForeignKeyToSchema( schema:DBSchema, tableName:String, key:DBForeignKey ):Void {
+	public static function addForeignKeyToSchema( schema:DBSchema, tableName:String, key:DBForeignKey ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to add foreign key to schema: table $tableName did not exist';
@@ -251,7 +251,7 @@ class MigrationApi extends UFApi {
 			onDelete: key.onDelete,
 		});
 	}
-	static function removeForeignKeyFromSchema( schema:DBSchema, tableName:String, key:DBForeignKey ):Void {
+	public static function removeForeignKeyFromSchema( schema:DBSchema, tableName:String, key:DBForeignKey ):Void {
 		var existingTable = getTableInSchema( schema, tableName );
 		if ( existingTable==null )
 			throw 'Failed to remove foreign key from schema: table $tableName did not exist';
@@ -260,16 +260,16 @@ class MigrationApi extends UFApi {
 			throw 'Failed to remove foreign key from schema: No such key existed';
 		existingTable.foreignKeys.remove( existingKey );
 	}
-	static function getTableName( model:Class<Dynamic> ):String {
+	public static function getTableName( model:Class<Dynamic> ):String {
 		var manager = new Manager( model );
 		return manager.dbInfos().name;
 	}
-	static function sortModelsByJoinOrder( c1:Class<Dynamic>, c2:Class<Dynamic> ):Int {
+	public static function sortModelsByJoinOrder( c1:Class<Dynamic>, c2:Class<Dynamic> ):Int {
 		var name1 = Type.getClassName( c1 ).split( '.' ).pop();
 		var name2 = Type.getClassName( c2 ).split( '.' ).pop();
 		return Reflect.compare( name1, name2 );
 	}
-	static function getJoinTableDescription( modelAName:String, modelBName:String ):DBTable {
+	public static function getJoinTableDescription( modelAName:String, modelBName:String ):DBTable {
 		var modelA = Type.resolveClass( modelAName );
 		var modelB = Type.resolveClass( modelBName );
 		var tables = [modelA,modelB];
@@ -295,7 +295,7 @@ class MigrationApi extends UFApi {
 			]
 		}
 	}
-	static function runActionOnSchema( schema:DBSchema, action:MigrationAction, direction:MigrationDirection ):Void {
+	public static function runActionOnSchema( schema:DBSchema, action:MigrationAction, direction:MigrationDirection ):Void {
 		switch direction {
 			case Up:
 				switch action {
