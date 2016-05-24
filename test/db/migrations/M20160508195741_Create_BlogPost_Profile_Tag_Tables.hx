@@ -8,10 +8,10 @@ class M20160508195741_Create_BlogPost_Profile_Tag_Tables extends Migration {
 			CreateTable({
 				tableName: "BlogPost",
 				fields: [
-					{ name:"authorID", type:DId },
-					{ name:"title", type:DString(255) },
-					{ name:"text", type:DText },
-					{ name:"url", type:DString(20) },
+					{ name:"authorID", type:DId, isNullable:false },
+					{ name:"title", type:DString(255), isNullable:false },
+					{ name:"text", type:DText, isNullable:false },
+					{ name:"url", type:DString(20), isNullable:false },
 				],
 				indicies: [{ fields:["url"], unique:true }],
 				foreignKeys: [],
@@ -19,10 +19,10 @@ class M20160508195741_Create_BlogPost_Profile_Tag_Tables extends Migration {
 			CreateTable({
 				tableName: "Profile",
 				fields: [
-					{ name:"personID", type:DId },
-					{ name:"facebook", type:DString(255) },
-					{ name:"twitter", type:DString(255) },
-					{ name:"github", type:DString(255) },
+					{ name:"personID", type:DId, isNullable:false },
+					{ name:"facebook", type:DString(255), isNullable:true },
+					{ name:"twitter", type:DString(255), isNullable:true },
+					{ name:"github", type:DString(255), isNullable:true },
 				],
 				indicies: [],
 				foreignKeys: [],
@@ -30,7 +30,7 @@ class M20160508195741_Create_BlogPost_Profile_Tag_Tables extends Migration {
 			CreateTable({
 				tableName: "Tag",
 				fields: [
-					{ name:"url", type:DString(10) },
+					{ name:"url", type:DString(10), isNullable:false },
 				],
 				indicies: [],
 				foreignKeys: [],

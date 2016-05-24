@@ -4,7 +4,7 @@ import sys.db.Types;
 import sys.db.RecordInfos.RecordType;
 
 /** A description of a column that exists on a database table. **/
-typedef DBColumn = { name:String, type:RecordType };
+typedef DBColumn = { name:String, type:RecordType, isNullable:Bool };
 
 /** A description of an index that exists on a database table. **/
 typedef DBIndex = { fields:Array<String>, unique:Bool };
@@ -19,7 +19,7 @@ typedef DBIndex = { fields:Array<String>, unique:Bool };
 }
 
 /** A description of a foreign key that exists on a database table. **/
-typedef DBForeignKey = { fields:Array<String>, relatedTableName:String, onUpdate:Null<DBReferentialAction>, onDelete:Null<DBReferentialAction> };
+typedef DBForeignKey = { fields:Array<String>, relatedTableName:String, relatedTableFields:Array<String>, onUpdate:Null<DBReferentialAction>, onDelete:Null<DBReferentialAction> };
 
 /** A description of a database table. **/
 typedef DBTable = {
@@ -44,12 +44,12 @@ enum MigrationAction {
 	RemoveField( tableName:String, field:DBColumn );
 	AddIndex( tableName:String, index:DBIndex );
 	RemoveIndex( tableName:String, index:DBIndex );
-	AddForeignKey( tableName:String, index:DBForeignKey );
-	RemoveForeignKey( tableName:String, index:DBForeignKey );
+	AddForeignKey( tableName:String, foreignKey:DBForeignKey );
+	RemoveForeignKey( tableName:String, foreignKey:DBForeignKey );
 	CreateJoinTable( modelAName:String, modelBName:String );
 	RemoveJoinTable( modelAName:String, modelBName:String );
-	InsertData( tableName:String, id:Null<Int>, properties:{} );
-	DeleteData( tableName:String, id:Null<Int>, properties:{} );
+	InsertData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
+	DeleteData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
 	/** Run custom functions as part of the migration. **/
 	CustomMigration( up:Void->Void, down:Void->Void );
 }

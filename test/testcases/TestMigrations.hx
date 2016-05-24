@@ -22,7 +22,7 @@ class TestMigrations extends DBTestClass {
 				CreateTable({
 					tableName: "fake_table",
 					fields: [
-						{ name:"id", type:DId },
+						{ name:"id", type:DId, isNullable:false },
 					],
 					indicies: [],
 					foreignKeys: [],

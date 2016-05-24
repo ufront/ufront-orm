@@ -138,9 +138,9 @@ class MigrationApi extends UFApi {
 				// Clone the `table` object to make sure we don't mutate the original schema.
 				schema.push({
 					tableName: table.tableName,
-					fields: [for (f in table.fields) { name:f.name, type:f.type }],
+					fields: [for (f in table.fields) { name:f.name, type:f.type, isNullable:f.isNullable }],
 					indicies: [for (i in table.indicies) { fields:i.fields.copy(), unique:i.unique }],
-					foreignKeys: [for (f in table.foreignKeys) { fields:f.fields.copy(), relatedTableName:f.relatedTableName, onUpdate:f.onUpdate, onDelete:f.onDelete }],
+					foreignKeys: [for (f in table.foreignKeys) { fields:f.fields.copy(), relatedTableName:f.relatedTableName, relatedTableFields:f.relatedTableFields, onUpdate:f.onUpdate, onDelete:f.onDelete }],
 				});
 			}
 		}
@@ -182,7 +182,8 @@ class MigrationApi extends UFApi {
 			throw 'Failed to add field to schema: Column ${column.name} on table $tableName already existed';
 		existingTable.fields.push({
 			name: column.name,
-			type: column.type
+			type: column.type,
+			isNull: column.isNull,
 		});
 	}
 	static function modifyFieldInSchema( schema:DBSchema, tableName:String, before:DBColumn, after:DBColumn ):Void {
@@ -245,6 +246,7 @@ class MigrationApi extends UFApi {
 		existingTable.foreignKeys.push({
 			fields: key.fields,
 			relatedTableName: key.relatedTableName,
+			relatedTableFields: key.relatedTableFields,
 			onUpdate: key.onUpdate,
 			onDelete: key.onDelete,
 		});
@@ -276,11 +278,11 @@ class MigrationApi extends UFApi {
 		return {
 			tableName: ManyToMany.generateTableName( modelA, modelB ),
 			fields: [
-				{ name:"id", type:DId },
-				{ name:"created", type:DDateTime },
-				{ name:"modified", type:DDateTime },
-				{ name:"r1", type:DUInt },
-				{ name:"r2", type:DUInt },
+				{ name:"id", type:DId, isNullable:false },
+				{ name:"created", type:DDateTime, isNullable:false },
+				{ name:"modified", type:DDateTime, isNullable:false },
+				{ name:"r1", type:DUInt, isNullable:false },
+				{ name:"r2", type:DUInt, isNullable:false },
 			],
 			indicies: [
 				{ fields:["r1","r2"], unique:true },
@@ -288,8 +290,8 @@ class MigrationApi extends UFApi {
 				{ fields:["r2"], unique:false },
 			],
 			foreignKeys: [
-				{ fields:["r1"], relatedTableName:tableNames[0], onUpdate:Cascade, onDelete:Cascade },
-				{ fields:["r2"], relatedTableName:tableNames[1], onUpdate:Cascade, onDelete:Cascade },
+				{ fields:["r1"], relatedTableName:tableNames[0], relatedTableFields:["id"], onUpdate:Cascade, onDelete:Cascade },
+				{ fields:["r2"], relatedTableName:tableNames[1], relatedTableFields:["id"], onUpdate:Cascade, onDelete:Cascade },
 			]
 		}
 	}
