@@ -2,8 +2,10 @@ package ufront.db.migrations;
 
 import ufront.db.migrations.Migration;
 import ufront.MVC;
+import minject.Injector;
 #if sys
 	import sys.db.Manager;
+	import sys.db.Connection;
 #end
 using tink.CoreApi;
 using Lambda;
@@ -13,6 +15,8 @@ This API provides a way of keeping the migrations in your database in sync with 
 A separate `MigrationCreationApi` is used to create Migration classes based on the differences between your models and your existing schema.
 **/
 class MigrationApi extends UFApi {
+
+	@inject public var injector:Injector;
 
 	/** Read the `uf_migration` table to and get an array of all migrations that have been run up. **/
 	public function getMigrationsFromDB():Array<Migration> {
@@ -107,9 +111,19 @@ class MigrationApi extends UFApi {
 	Run a set of migrations against the database.
 	**/
 	public function applyMigrations( migrations:Array<Migration>, direction:MigrationDirection ):Void {
-		var cnxMigrator = throw "NOT IMPLEMENTED"; // Should we @inject it?
+		if ( !injector.hasMapping(MigrationManager) )
+			injector.map( MigrationManager ).asSingleton();
+		if ( !injector.hasMapping(Connection) )
+			injector.map( Connection ).toValue( Manager.cnx );
+		var migrationManager:MigrationManager = throw "NOT IMPLEMENTED"; // Should we @inject it?
 		for ( migration in migrations ) {
-			cnxMigrator.run( migration, direction );
+			var migration = migrationManager.runMigration( migration, direction ).sure();
+			switch direction {
+				case Up:
+					migration.save();
+				case Down:
+					migration.delete();
+			}
 		}
 	}
 
