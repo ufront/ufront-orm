@@ -8,6 +8,9 @@ class M20160508154702_Create_Person_Table extends Migration {
 			CreateTable({
 				tableName: "Person",
 				fields: [
+					{ name:"id", type:DId, isNullable:false },
+					{ name:"created", type:DDateTime, isNullable:false },
+					{ name:"modified", type:DDateTime, isNullable:false },
 					{ name:"firstName", type:DString(20), isNullable:false },
 					{ name:"surname", type:DString(20), isNullable:false },
 					{ name:"email", type:DString(50), isNullable:false },

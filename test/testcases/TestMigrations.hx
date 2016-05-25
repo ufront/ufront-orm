@@ -4,6 +4,7 @@ import utest.Assert;
 import testcases.models.*;
 import ufront.ORM;
 import db.migrations.*;
+import sys.db.Manager;
 
 class TestMigrations extends DBTestClass {
 
@@ -13,6 +14,11 @@ class TestMigrations extends DBTestClass {
 		super.setup();
 		api = new MigrationApi();
 		recreateTable( Migration.manager );
+		dropJoinTable( BlogPost, Tag );
+		dropTable( Tag.manager );
+		dropTable( BlogPost.manager );
+		dropTable( Profile.manager );
+		dropTable( Person.manager );
 
 		// Set up 2 fake migrations.
 		var m1 = new M20160508154702_Create_Person_Table();
@@ -68,5 +74,15 @@ class TestMigrations extends DBTestClass {
 		Assert.equals( "Profile", codeSchema[2].tableName );
 		Assert.equals( "Tag", codeSchema[3].tableName );
 		Assert.equals( "_join_BlogPost_Tag", codeSchema[4].tableName );
+	}
+
+	function testMigrationManagerAndConnection() {
+		var cnx = new MigrationConnection( Manager.cnx );
+		var manager = new MigrationManager( cnx );
+		var codeMigrations = api.getMigrationsInCode();
+		for ( m in codeMigrations ) {
+			manager.runMigration( m, Up );
+		}
+		Assert.isTrue( true );
 	}
 }
