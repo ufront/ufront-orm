@@ -295,8 +295,8 @@ class MigrationApi extends UFApi {
 				{ name:"id", type:DId, isNullable:false },
 				{ name:"created", type:DDateTime, isNullable:false },
 				{ name:"modified", type:DDateTime, isNullable:false },
-				{ name:"r1", type:DUInt, isNullable:false },
-				{ name:"r2", type:DUInt, isNullable:false },
+				{ name:"r1", type:DInt, isNullable:false },
+				{ name:"r2", type:DInt, isNullable:false },
 			],
 			indicies: [
 				{ fields:["r1","r2"], unique:true },
