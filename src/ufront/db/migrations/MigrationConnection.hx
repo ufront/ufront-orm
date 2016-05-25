@@ -19,17 +19,18 @@ class MigrationConnection {
 	public function createTable( table:DBTable ) {
 		var s = new StringBuf();
 		s.add( 'CREATE TABLE ' );
-		s.add( cnx.quote(table.tableName) );
+		s.add( quoteField(table.tableName) );
 		s.add( '\n(\n' );
 		var decls = [];
 		for( column in table.fields )
 			decls.push( getColumnDefinition(cnx.dbName(),column) );
-		if( cnx.dbName()!="SQLite" )
-			decls.push( "PRIMARY KEY ('id')" );
-		for ( key in table.foreignKeys )
-			decls.push( getForeignKeyDefinition(table.tableName,key) );
-		for ( index in table.indicies )
-			decls.push( getIndexDefinition(table.tableName,index) );
+		if( cnx.dbName()!="SQLite" ) {
+			decls.push( "PRIMARY KEY (`id`)" );
+			for ( index in table.indicies )
+				decls.push( getIndexDefinition(table.tableName,index) );
+			for ( key in table.foreignKeys )
+				decls.push( getForeignKeyDefinition(table.tableName,key) );
+		}
 		s.add( decls.join(",\n") );
 		s.add( "\n)" );
 		cnx.request( s.toString() );
@@ -59,24 +60,32 @@ class MigrationConnection {
 	}
 
 	public function addIndex( tableName:String, index:DBIndex ) {
+		if ( cnx.dbName()=="SQLite" )
+			return;
 		var tableName = quoteField( tableName );
 		var indexDefinition = getIndexDefinition( tableName, index );
 		cnx.request( 'ALTER TABLE $tableName ADD $indexDefinition' );
 	}
 
 	public function removeIndex( tableName:String, index:DBIndex ) {
+		if ( cnx.dbName()=="SQLite" )
+			return;
 		var tableName = quoteField( tableName );
 		var indexName = getIndexName( tableName, index );
 		cnx.request( 'ALTER TABLE $tableName DROP INDEX $indexName' );
 	}
 
 	public function addForeignKey( tableName:String, foreignKey:DBForeignKey ) {
+		if ( cnx.dbName()=="SQLite" )
+			return;
 		var tableName = quoteField( tableName );
 		var foreignKeyDefinition = getForeignKeyDefinition( tableName, foreignKey );
 		cnx.request( 'ALTER TABLE $tableName ADD $foreignKeyDefinition' );
 	}
 
 	public function removeForeignKey( tableName:String, foreignKey:DBForeignKey ) {
+		if ( cnx.dbName()=="SQLite" )
+			return;
 		var tableName = quoteField( tableName );
 		var foreignKeyName = getForeignKeyName( tableName, foreignKey );
 		cnx.request( 'ALTER TABLE $tableName DROP FOREIGN KEY $foreignKeyName' );
