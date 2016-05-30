@@ -79,10 +79,7 @@ class TestMigrations extends DBTestClass {
 	function testMigrationManagerAndConnection() {
 		var cnx = new MigrationConnection( Manager.cnx );
 		var manager = new MigrationManager( cnx );
-		var codeMigrations = api.getMigrationsInCode();
-		for ( m in codeMigrations ) {
-			manager.runMigration( m, Up );
-		}
+		api.syncMigrationsUp();
 		Assert.isTrue( true );
 	}
 }
