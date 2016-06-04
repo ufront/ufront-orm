@@ -78,7 +78,10 @@ class TestMigrations extends DBTestClass {
 	}
 
 	function testMigrationManagerAndConnection() {
-		api.applyMigrations( [m2], Up );
+		Migration.manager.delete( $id!=-1 );
+		// Try apply 2 migrations up manually.
+		api.applyMigrations( [m1,m2], Up );
+		// Now m1 should stay, m2 should go Down, and the rest should go Up.
 		api.syncMigrationsUp();
 		Assert.isTrue( true );
 	}

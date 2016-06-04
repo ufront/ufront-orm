@@ -122,7 +122,7 @@ class MigrationApi extends UFApi {
 			var migration = migrationManager.runMigration( migration, direction ).sure();
 			switch direction {
 				case Up:
-					migration.save();
+					migration.insert();
 				case Down:
 					migration.delete();
 			}
