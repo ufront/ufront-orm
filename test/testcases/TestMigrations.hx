@@ -5,14 +5,18 @@ import testcases.models.*;
 import ufront.ORM;
 import db.migrations.*;
 import sys.db.Manager;
+import minject.Injector;
 
 class TestMigrations extends DBTestClass {
 
 	var api:MigrationApi;
+	var m1:Migration;
+	var m2:Migration;
 
 	override function setup() {
 		super.setup();
 		api = new MigrationApi();
+		api.injector = new Injector();
 		recreateTable( Migration.manager );
 		dropJoinTable( BlogPost, Tag );
 		dropTable( Tag.manager );
@@ -21,10 +25,10 @@ class TestMigrations extends DBTestClass {
 		dropTable( Person.manager );
 
 		// Set up 2 fake migrations.
-		var m1 = new M20160508154702_Create_Person_Table();
+		m1 = new M20160508154702_Create_Person_Table();
 		m1.save();
 		@:privateAccess {
-			var m2 = new Migration([
+			m2 = new Migration([
 				CreateTable({
 					tableName: "fake_table",
 					fields: [
@@ -77,8 +81,7 @@ class TestMigrations extends DBTestClass {
 	}
 
 	function testMigrationManagerAndConnection() {
-		var cnx = new MigrationConnection( Manager.cnx );
-		var manager = new MigrationManager( cnx );
+		api.applyMigrations( [m2], Up );
 		api.syncMigrationsUp();
 		Assert.isTrue( true );
 	}

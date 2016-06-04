@@ -113,9 +113,11 @@ class MigrationApi extends UFApi {
 	public function applyMigrations( migrations:Array<Migration>, direction:MigrationDirection ):Void {
 		if ( !injector.hasMapping(MigrationManager) )
 			injector.map( MigrationManager ).asSingleton();
+		if ( !injector.hasMapping(MigrationConnection) )
+			injector.map( MigrationConnection ).asSingleton();
 		if ( !injector.hasMapping(Connection) )
 			injector.map( Connection ).toValue( Manager.cnx );
-		var migrationManager:MigrationManager = throw "NOT IMPLEMENTED"; // Should we @inject it?
+		var migrationManager:MigrationManager = injector.getValue( MigrationManager );
 		for ( migration in migrations ) {
 			var migration = migrationManager.runMigration( migration, direction ).sure();
 			switch direction {
