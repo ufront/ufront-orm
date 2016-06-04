@@ -17,16 +17,13 @@ class TestMigrations extends DBTestClass {
 		super.setup();
 		api = new MigrationApi();
 		api.injector = new Injector();
-		recreateTable( Migration.manager );
-		dropJoinTable( BlogPost, Tag );
-		dropTable( Tag.manager );
-		dropTable( BlogPost.manager );
-		dropTable( Profile.manager );
-		dropTable( Person.manager );
+		createTable( Migration );
 
 		// Set up 2 fake migrations.
 		m1 = new M20160508154702_Create_Person_Table();
 		m1.save();
+
+		cnx.request( 'DROP TABLE IF EXISTS fake_table' );
 		@:privateAccess {
 			m2 = new Migration([
 				CreateTable({

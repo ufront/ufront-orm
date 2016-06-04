@@ -1,5 +1,8 @@
 import sys.db.*;
 import ufront.db.*;
+import testcases.models.*;
+import testcases.issues.Issue001;
+import ufront.db.migrations.Migration;
 
 class DBTestClass {
 	var cnx:Connection;
@@ -10,13 +13,26 @@ class DBTestClass {
 
 	function setup() {
 		Manager.cnx = cnx;
+		// TODO: is there an easy, cross platform "DROP ALL TABLES" option?
+		dropTable( Migration );
+		dropJoinTable( BlogPost, Tag );
+		dropTable( Tag );
+		dropTable( BlogPost );
+		dropTable( Profile );
+		dropTable( Person );
+		dropJoinTable( Issue001_MyObject, Issue001_Category );
+		dropJoinTable( Issue001_MyObject, Issue001_Language );
+		dropTable( Issue001_MyObject );
+		dropTable( Issue001_Category );
+		dropTable( Issue001_Language );
 	}
 
 	function teardown() {
 		Manager.cnx = null;
 	}
 
-	function dropTable( manager:Manager<Dynamic> ) {
+	function dropTable( cls:Class<sys.db.Object> ) {
+		var manager = new Manager( cls );
 		var tableName = @:privateAccess manager.table_name;
 		try {
 			cnx.request( 'DROP TABLE IF EXISTS $tableName' );
@@ -25,8 +41,8 @@ class DBTestClass {
 		}
 	}
 
-	function recreateTable( manager:Manager<Dynamic> ) {
-		dropTable( manager );
+	function createTable( cls:Class<sys.db.Object> ) {
+		var manager = new Manager( cls );
 		TableCreate.create( manager );
 	}
 
@@ -39,8 +55,7 @@ class DBTestClass {
 		}
 	}
 
-	function recreateJoinTable( classA:Class<ufront.db.Object>, classB:Class<ufront.db.Object> ) {
-		dropJoinTable( classA, classB );
+	function createJoinTable( classA:Class<ufront.db.Object>, classB:Class<ufront.db.Object> ) {
 		var tableName = ManyToMany.generateTableName( classA, classB );
 		ManyToMany.createJoinTable( classA, classB );
 	}

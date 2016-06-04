@@ -13,10 +13,10 @@ class TestSerialization extends DBTestClass {
 
 	override function setup() {
 		super.setup();
-		recreateTable( Person.manager );
-		recreateTable( Profile.manager );
-		recreateTable( BlogPost.manager );
-		recreateTable( Tag.manager );
+		createTable( Person );
+		createTable( Profile );
+		createTable( BlogPost );
+		createTable( Tag );
 
 		tag1 = new Tag();
 		tag1.url = "coffee";
