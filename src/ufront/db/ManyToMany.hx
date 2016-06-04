@@ -249,7 +249,7 @@ class ManyToMany<A:Object, B:Object> {
 			@param aObjectIDs The specific models you want to get.  If not supplied, we'll get a map of ALL manyToMany relationships between these two models.
 			@return An IntMap, where the key is aObjectID, and the value is a list of related bObjectIDs
 		**/
-		public static function relatedIDsforObjects(aModel:Class<Object>, bModel:Class<Object>, ?aObjectIDs:Iterable<SUId>):IntMap<List<Int>> {
+		public static function relatedIDsforObjects(aModel:Class<Object>, bModel:Class<Object>, ?aObjectIDs:Iterable<SId>):IntMap<List<Int>> {
 			// Set up
 			var aBeforeB = isABeforeB(aModel,bModel);
 			var tableName = generateTableName(aModel,bModel);

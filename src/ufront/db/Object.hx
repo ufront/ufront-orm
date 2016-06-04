@@ -24,7 +24,7 @@ The type of each variable matches the type used in the database.
 
 On the server, this class extends `sys.db.Object` and adds:
 
-- a default unique `this.id` field (`SUId`, unsigned auto-incrementing integer)
+- a default unique `this.id` field (`SId`, unsigned auto-incrementing integer)
 - a `this.created` timestamp (`SDateTime`)
 - a `this.modified` timestamps (`SDateTime`)
 - modified `this.insert()` and `this.update()` methods that check validation and updates `this.created` and `this.modified` timestamps
