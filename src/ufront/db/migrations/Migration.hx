@@ -113,4 +113,8 @@ class Migration extends Object {
 		this.migrationID = className.substr( className.lastIndexOf(".")+1 );
 		this.actions = actions;
 	}
+
+	override public function toString():String {
+		return migrationID;
+	}
 }
