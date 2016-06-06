@@ -83,6 +83,59 @@ class TestMigrations extends DBTestClass {
 		api.applyMigrations( [m1,m2], Up );
 		// Now m1 should stay, m2 should go Down, and the rest should go Up.
 		api.syncMigrationsUp();
-		Assert.isTrue( true );
+
+		// Assert that m2 has been migrated "Down".
+		Assert.raises(function() {
+			cnx.request( "SELECT * FROM fake_table" );
+		}, "Expected fake_table to not exist, but it did");
+
+		// Assert that all our other tables now exist.
+		var person = new Person();
+		person.firstName = "Jason";
+		person.surname = "O'Neil";
+		person.email = "jason@ufront.net";
+		person.age = 28;
+		person.bio = null;
+		person.insert();
+
+		var profile = new Profile();
+		profile.person = person;
+		profile.github = "jasononeil";
+		profile.twitter = "jasonaoneil";
+		profile.save();
+
+		var post = new BlogPost();
+		post.author = person;
+		post.title = "F1rst P0st!!1";
+		post.url = "first_post";
+		post.text = "How clever and witty!";
+		post.save();
+
+		var tag = new Tag();
+		tag.url = "meaningless_fluff";
+		tag.save();
+		tag.posts.add( post );
+
+		Assert.equals( 1, Person.manager.all().length );
+		Assert.equals( 1, Profile.manager.all().length );
+		Assert.equals( 1, BlogPost.manager.all().length );
+		Assert.equals( 1, Tag.manager.all().length );
+		Assert.equals( post, Tag.manager.all().first().posts.first() );
+
+		// Let's see if our CASCADE / RESTRICT relationships work!
+		if ( cnx.dbName()!="SQLite" ) {
+			Assert.raises(function() {
+				person.delete();
+				cnx.request( "SELECT * FROM fake_table" );
+			}, "Expected person.delete() to be RESTRICTED because of the BlogPost_authorID foreignKey, but it was allowed.");
+			post.delete();
+			person.delete();
+			Assert.equals( 0, Person.manager.all().length );
+			Assert.equals( 0, Profile.manager.all().length );
+			Assert.equals( 0, BlogPost.manager.all().length );
+			Assert.equals( 1, Tag.manager.all().length );
+			sys.db.Manager.cleanup();
+			Assert.equals( 0, Tag.manager.all().first().posts.length );
+		}
 	}
 }
