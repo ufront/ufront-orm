@@ -13,6 +13,17 @@ class DBTestClass {
 
 	function setup() {
 		Manager.cnx = cnx;
+		#if php
+			// See https://github.com/ufront/ufront-orm/issues/9
+			Migration.manager;
+			BlogPost.manager;
+			Tag.manager;
+			Profile.manager;
+			Person.manager;
+			Issue001_MyObject.manager;
+			Issue001_Category.manager;
+			Issue001_Language.manager;
+		#end
 		// TODO: is there an easy, cross platform "DROP ALL TABLES" option?
 		dropTable( Migration );
 		dropJoinTable( BlogPost, Tag );
