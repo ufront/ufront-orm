@@ -36,11 +36,16 @@ echo "Test PHP sqlite"
 echo "---------------"
 php build/php_test.php sqlite || exit
 
+echo ""
 echo "Compile #2 (using cache)"
+echo "------------------------"
 haxe --connect $HAXE_COMPILER_PORT test.hxml || exit
 
+echo ""
 echo "--------------------------------------------"
 echo "Re-test neko mysql after compile using cache"
 neko build/neko_test.n mysql || exit
 
+echo ""
+echo "--------------------------"
 echo "Finished! All tests passed"
