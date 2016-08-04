@@ -39,7 +39,7 @@ class M20160508195741_Create_BlogPost_Profile_Tag_Tables extends Migration {
 					{ name:"id", type:DId, isNullable:false },
 					{ name:"created", type:DDateTime, isNullable:false },
 					{ name:"modified", type:DDateTime, isNullable:false },
-					{ name:"url", type:DString(10), isNullable:false },
+					{ name:"url", type:DString(20), isNullable:false },
 				],
 				indicies: [],
 				foreignKeys: [],
