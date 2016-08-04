@@ -50,8 +50,20 @@ enum MigrationAction {
 	RemoveJoinTable( modelAName:String, modelBName:String );
 	InsertData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
 	DeleteData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
-	/** Run custom functions as part of the migration. **/
-	CustomMigration( up:Void->Void, down:Void->Void );
+	/**
+	Run custom functions as part of the migration.
+
+	These can only be run if they exist in the code.
+	For example, if you switch to a new branch, and run a custom migration "up", it will be added.
+	If you switch to the old branch, and try to run it "down", it will not be able to.
+	You need to run it "down" from your new branch, where it exists, then switch to the old branch.
+
+	It is recommended that a CustomMigration not affect the schema.
+	For example, don't use it to create new columns or tables.
+	If you do, the MigrationApi's ability to generate new migrations based on changes to your models will be broken.
+	You must use the other MigrationActions to make sure MigrationApi can detect changes to the Schema accurately.
+	**/
+	CustomMigration( up:sys.db.Connection->Void, down:sys.db.Connection->Void );
 }
 
 /**
