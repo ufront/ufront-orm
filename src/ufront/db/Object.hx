@@ -111,6 +111,8 @@ class Object #if server extends sys.db.Object #end {
 		**/
 		override public function update() {
 			if (this.validate()) {
+				if (this.created==null)
+					this.created = Date.now();
 				this.modified = Date.now();
 				super.update();
 			}
