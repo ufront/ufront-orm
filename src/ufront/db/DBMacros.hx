@@ -11,23 +11,35 @@ using Lambda;
 
 class DBMacros
 {
-	public static function setupDBObject():Array<Field>
-	{
+	static var modelsNeedingMetadata = [];
+
+	public static function setupDBObject():Array<Field> {
 		var fields = BuildTools.getFields();
 		var localClass = Context.getLocalClass();
 
 		fields = setupRelations(fields);
 		fields = addManager(fields);
 		fields = addValidation(fields);
-		Context.onGenerate(function (types) {
-			for ( t in types ) {
-				switch t {
-					case TInst(tRef,params) if (tRef.toString()==localClass.toString()):
-						addSerializationMetadata(tRef.get());
-					default:
-				}
-			}
+
+		// During Context.onGenerate, we add metadata to all of our models.
+		// We want to run this loop once per compile, rather than once per-model-per-compile.
+		// We also need to make sure it re-runs each compile, so we need to reset `modelsNeedingMetadata` on each compilation.
+		Context.onMacroContextReused(function () {
+			modelsNeedingMetadata = [];
+			return true;
 		});
+		if ( modelsNeedingMetadata.length==0 ) {
+			Context.onGenerate(function (types) {
+				for ( t in types ) {
+					switch t {
+						case TInst(tRef,params) if ( modelsNeedingMetadata.indexOf(tRef.toString())>-1 ):
+							addSerializationMetadata(tRef.get());
+						default:
+					}
+				}
+			});
+		}
+		modelsNeedingMetadata.push( localClass.toString() );
 
 		// DCE can sometimes cause Bytes.toString() to not be compiled, which causes issues when working with SData.
 		// This is a workaround.
