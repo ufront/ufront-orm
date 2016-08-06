@@ -33,8 +33,15 @@ typedef DBTable = {
 typedef DBSchema = Array<DBTable>;
 
 /**
-A description of the actions that can occur during a database migration.
-These could be run up or down.
+The actions that occur during a database migration.
+
+These are designed to be able to run up and run down, so using an action will modify the database appropriately in both directions.
+
+Each value except `CustomMigration` can be run "down" even if the migration no longer exists in the code.
+So if you check out an old commit or branch, it will be able to undo the migrations.
+
+The `CustomMigration` function does require the migration to exist in the code.
+If you need to check out an old branch, you will need to run the migration "down" first before checking out the old code.
 **/
 enum MigrationAction {
 	CreateTable( table:DBTable );
@@ -51,6 +58,14 @@ enum MigrationAction {
 	InsertData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
 	DeleteData( tableName:String, columns:Array<String>, data:Array<{ id:Null<Int>, values:Array<Dynamic> }> );
 	/**
+	Run a custom SQL statement on the database.
+
+	One common use case here is performing a complex `UPDATE` query on the DB.
+
+	Similar to `CustomMigration`, it is recommended that `CustomSql` not be used to change the schema.
+	**/
+	CustomSql( sqlUp:String, sqlDown:String );
+	/**
 	Run custom functions as part of the migration.
 
 	These can only be run if they exist in the code.
@@ -64,6 +79,18 @@ enum MigrationAction {
 	You must use the other MigrationActions to make sure MigrationApi can detect changes to the Schema accurately.
 	**/
 	CustomMigration( up:sys.db.Connection->Void, down:sys.db.Connection->Void );
+	/**
+	Similar to `CustomMigration`, but only performs an action in the "up" direction.
+
+	An example where this is useful is populating a field that has been added.
+	If the action `AddField` is followed by `CustomMigrationUp`, you can use the custom migration to populate the new field.
+	When running down, the `CustomMigrationUp` is skipped and the field is deleted.
+
+	The advantage is that this migration action does not block migrations from being run "down" if the migration no longer exists in the code.
+
+	Similar to `CustomMigration`, it is recommended that `CustomMigrationUp` not be used to change the schema.
+	**/
+	CustomMigrationUp( up:sys.db.Connection->Void );
 }
 
 /**

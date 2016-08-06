@@ -95,9 +95,15 @@ class MigrationManager {
 			case DeleteData( tableName, columns, data ):
 				cnx.deleteData( tableName, columns, data );
 				Success( action );
+			case CustomSql( upSql, downSql ):
+				cnx.customSql( upSql );
+				Success( CustomSql(upSql,downSql) );
 			case CustomMigration( up, down ):
 				cnx.customMigration( up );
 				Success( CustomMigration(null,null) );
+			case CustomMigrationUp( up ):
+				cnx.customMigration( up );
+				Success( CustomMigrationUp(null) );
 		}
 	}
 
@@ -148,9 +154,15 @@ class MigrationManager {
 			case DeleteData( tableName, columns, data ):
 				var newData = cnx.insertData( tableName, columns, data );
 				Success( InsertData(tableName,columns,newData) );
+			case CustomSql( upSql, downSql ):
+				cnx.customSql( downSql );
+				Success( CustomSql(upSql,downSql) );
 			case CustomMigration( up, down ):
 				cnx.customMigration( down );
 				Success( CustomMigration(null,null) );
+			case CustomMigrationUp( up ):
+				// Nothing to do when running "down".
+				Success( CustomMigrationUp(null) );
 		}
 	}
 }

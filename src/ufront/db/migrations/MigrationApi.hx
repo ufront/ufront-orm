@@ -329,7 +329,9 @@ class MigrationApi extends UFApi {
 					// The following actions should have no effect on the schema:
 					case InsertData( tableName, id, properties ):
 					case DeleteData( tableName, id, properties ):
+					case CustomSql( upSql, downSql ):
 					case CustomMigration( up, down ):
+					case CustomMigrationUp( up ):
 				}
 			case Down:
 				switch action {
@@ -347,7 +349,9 @@ class MigrationApi extends UFApi {
 					// The following actions should have no effect on the schema:
 					case InsertData( tableName, id, properties ):
 					case DeleteData( tableName, id, properties ):
+					case CustomSql( upSql, downSql ):
 					case CustomMigration( up, down ):
+					case CustomMigrationUp( up ):
 				}
 		}
 	}

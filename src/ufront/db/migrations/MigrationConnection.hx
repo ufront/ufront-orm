@@ -131,6 +131,10 @@ class MigrationConnection {
 		cnx.request( 'DELETE FROM $tableName WHERE $whereCondition' );
 	}
 
+	public function customSql( sql:String ) {
+		cnx.request( sql );
+	}
+
 	public function customMigration( fn:Connection->Void ) {
 		fn( cnx );
 	}
