@@ -20,12 +20,12 @@ class QueryBuilder {
 	}
 
 	/** Execute a select query, returning an iterable of each matching row. **/
-	public static macro function select( model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):Expr {
+	public static macro function select( cnx:ExprOf<sys.db.Connection>, model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):Expr {
 		var qb = prepareSelectQuery( model, rest );
 		var query = qb.generateSelectQuery();
 		var complexType = qb.generateComplexTypeForFields( qb.fields );
 		return macro {
-			var resultSet = sys.db.Manager.cnx.request( $query );
+			var resultSet = $cnx.request( $query );
 			([for (r in resultSet) r]:Array<$complexType>);
 		}
 	}
