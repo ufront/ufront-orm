@@ -23,7 +23,7 @@ class QueryBuilder {
 	public static macro function select( cnx:ExprOf<sys.db.Connection>, model:ExprOf<Class<sys.db.Object>>, rest:Array<Expr> ):Expr {
 		var qb = prepareSelectQuery( model, rest );
 		var query = qb.generateSelectQuery();
-		var complexType = qb.generateComplexTypeForFields( qb.fields );
+		var complexType = qb.generateComplexTypeForFields();
 		return macro {
 			var resultSet = $cnx.request( $query );
 			([for (r in resultSet) r]:Array<$complexType>);
@@ -142,7 +142,10 @@ class QueryBuilder {
 		}
 		// Add any fields which are probably in the database. (Not skipped, and a var rather than a method).
 		for ( classField in classType.fields.get() ) {
-			if ( classField.meta.has(":skip")==false && classField.kind.match(FVar(_,_)) ) {
+			if (["_manager", "_lock", "__cache__"].indexOf(classField.name) > -1) {
+				// Skip certain fields on sys.db.Object that aren't marked as @:skip.
+			}
+			else if ( classField.meta.has(":skip")==false && classField.kind.match(FVar(_,_)) ) {
 				// Add all fields that are columns in the database.
 				modelTable.fields.set( classField.name, Left(classField) );
 			}
@@ -187,7 +190,7 @@ class QueryBuilder {
 	**/
 	function processFields() {
 		var errorMsg = 'Unexpected expression in field list';
-		for ( field in this.originalExprs.fields ) {
+		for (field in this.originalExprs.fields) {
 			switch field {
 				case macro $alias = $column:
 					var aliasParts = extractFieldAccessParts( alias, errorMsg );
@@ -526,12 +529,39 @@ class QueryBuilder {
 			else macro "";
 	}
 
-	function generateComplexTypeForFields( fields:Array<SelectField> ):ComplexType {
+	function generateComplexTypeForFields():ComplexType {
+		if (this.fields.length > 0) {
+			return generateComplexTypeFromSelectFields( this.fields );
+		}
+		else {
+			return generateComplexTypeFromModel();
+		}
+	}
+
+	function generateComplexTypeFromModel():ComplexType {
+		var fieldsForCT:Array<Field> = [];
+		for (fieldName in this.table.fields.keys()) {
+			switch this.table.fields[fieldName] {
+				case Left(classField):
+					var field:Field = {
+						pos: this.originalExprs.from.pos,
+						name: classField.name,
+						kind: FVar(classField.type.toComplex({ direct:true }), null),
+					};
+					fieldsForCT.push( field );
+				case Right(joinDescription):
+					// Do not include joins by default.
+			}
+		}
+		return TAnonymous( fieldsForCT );
+	}
+
+	function generateComplexTypeFromSelectFields( fields:Array<SelectField> ):ComplexType {
 		var fieldsForCT:Array<Field> = [];
 		for (f in fields) {
 			var fieldCT = switch f.type {
 				case Left(type): type.toComplex({ direct:true });
-				case Right(subfields): generateComplexTypeForFields( subfields );
+				case Right(subfields): generateComplexTypeFromSelectFields( subfields );
 			}
 			var field:Field = {
 				pos: f.pos,
