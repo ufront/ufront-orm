@@ -70,7 +70,9 @@ class ORM {}
 @:noDoc @:noUsing typedef MigrationAction = ufront.db.migrations.Migration.MigrationAction;
 @:noDoc @:noUsing typedef MigrationDirection = ufront.db.migrations.Migration.MigrationDirection;
 @:noDoc @:noUsing typedef Migration = ufront.db.migrations.Migration;
+#if ufront_mvc
 @:noDoc @:noUsing typedef MigrationApi = ufront.db.migrations.MigrationApi;
 @:noDoc @:noUsing typedef MigrationConnection = ufront.db.migrations.MigrationConnection;
 @:noDoc @:noUsing typedef MigrationManager = ufront.db.migrations.MigrationManager;
+#end
 // @:noDoc @:noUsing typedef MigrationMacros = ufront.db.migrations.MigrationMacros;
