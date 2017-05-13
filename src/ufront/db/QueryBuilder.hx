@@ -375,14 +375,14 @@ class QueryBuilder {
 							tableAndJoins = '$tableAndJoins $joinStatement';
 							tableAndJoins = addJoins( tableAndJoins, relatedTable );
 						case JTHasMany(relKey):
-							throw "HasMany Joins are not supported yet";
+							throw "HasMany Joins are not supported";
 						case JTBelongsTo:
 							var relatedTable = join.relatedTable.get();
 							var joinStatement = 'JOIN ${relatedTable.name} ${relatedTable.alias} ON ${relatedTable.alias}.id = ${currentTable.alias}.${fieldName}ID';
 							tableAndJoins = '$tableAndJoins $joinStatement';
 							tableAndJoins = addJoins( tableAndJoins, relatedTable );
 						case JTManyToMany:
-							throw "ManyToMany Joins are not supported yet";
+							throw "ManyToMany Joins are not supported";
 					}
 				case _:
 			}

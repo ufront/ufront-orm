@@ -22,6 +22,7 @@ class TestQueryBuilder extends DBTestClass {
 		person1.insert();
 
 		var profile1 = new Profile();
+		profile1.id = 1;
 		profile1.person = person1;
 		profile1.twitter = 'jasonaoneil';
 		profile1.github = 'jasononeil';
@@ -36,6 +37,7 @@ class TestQueryBuilder extends DBTestClass {
 		person2.insert();
 
 		var profile2 = new Profile();
+		profile2.id = 2;
 		profile2.person = person2;
 		profile2.facebook = 'annaomusic';
 		profile2.github = null;
@@ -69,18 +71,14 @@ class TestQueryBuilder extends DBTestClass {
 		var people = cnx.select( Person );
 		Assert.equals( 3, people.length );
 		for (person in people) {
-			// TODO: make sure null fields exist.
-			// checkFieldsExist(person, ["firstName", "surname", "email", "age", "bio"]);
-			checkFieldsExist(person, ["firstName", "surname", "email", "age"]);
+			checkFieldsExist(person, ["firstName", "surname", "email", "age", "bio"]);
 			checkFieldsDoNotExist(person, ["facebook","profile","save"]);
 		}
 
 		var profiles = cnx.select( Profile );
 		Assert.equals( 2, profiles.length );
 		for (profile in profiles) {
-			// TODO: make sure null fields exist.
-			// checkFieldsExist(profile, ["twitter", "facebook", "github"]);
-			checkFieldsExist(profile, ["twitter"]);
+			checkFieldsExist(profile, ["twitter", "facebook", "github"]);
 			checkFieldsDoNotExist(profile, ["person","age","save"]);
 		}
 	}
@@ -106,16 +104,6 @@ class TestQueryBuilder extends DBTestClass {
 			checkFieldsExist(profile, ["identifier","twitter"]);
 			checkFieldsDoNotExist(profile, ["id","created","modified","facebook","github"]);
 		}
-
-		// join column fields
-		// join column field aliases
-	}
-
-	function testSelectJoins() {
-		// belongsTo
-		// hasOne
-		// hasMany
-		// manyToMany
 	}
 
 	function getName(p) return p.firstName;
@@ -193,16 +181,14 @@ class TestQueryBuilder extends DBTestClass {
 		var people = cnx.select(Person, Where($id>$age));
 		Assert.equals(1, people.length);
 		Assert.equals("Theo", people[0].firstName);
+	}
 
-		// where condition on join column
+	function checkOrder(expectedNames, values, ?p:haxe.PosInfos) {
+		var actualNames = values.map(getName).join(",");
+		Assert.equals(expectedNames, actualNames, 'Expected order to be [$expectedNames] but was [$actualNames]', p);
 	}
 
 	function testSelectOrderBy() {
-		function checkOrder(expectedNames, values, ?p:haxe.PosInfos) {
-			var actualNames = values.map(getName).join(",");
-			Assert.equals(expectedNames, actualNames, 'Expected order to be [$expectedNames] but was [$actualNames]', p);
-		}
-
 		// ascending and descending
 		checkOrder("Theo,Anna,Jason", cnx.select(Person, OrderBy($age)));
 		checkOrder("Jason,Anna,Theo", cnx.select(Person, OrderBy(-$age)));
@@ -224,8 +210,6 @@ class TestQueryBuilder extends DBTestClass {
 		// multiple values
 		var secondColumn = "age";
 		checkOrder("Theo,Anna,Jason", cnx.select(Person, OrderBy($surname,secondColumn)));
-
-		// order by on join column
 	}
 
 	function testSelectLimit() {
@@ -260,5 +244,94 @@ class TestQueryBuilder extends DBTestClass {
 		Assert.equals(2, people.length);
 		Assert.equals("Jason", people[0].firstName);
 		Assert.equals("Theo", people[1].firstName);
+	}
+
+	function testBelongsToJoins() {
+		// test fields
+		var profiles = cnx.select(Profile, Fields(twitter, person.firstName, person.surname));
+		Assert.equals(2, profiles.length);
+		for (profile in profiles) {
+			checkFieldsExist(profile, ["twitter", "person"]);
+			checkFieldsExist(profile.person, ["firstName", "surname"]);
+		}
+
+		// test overlapping fields
+		var profiles = cnx.select(Profile, Fields(id, person.id, person.firstName), OrderBy($id));
+		Assert.equals(2, profiles.length);
+		Assert.equals("Jason", profiles[0].person.firstName);
+		Assert.equals(1, profiles[0].id);
+		Assert.equals(2, profiles[0].person.id);
+		Assert.equals("Anna", profiles[1].person.firstName);
+		Assert.equals(2, profiles[1].id);
+		Assert.equals(1, profiles[1].person.id);
+
+		// test field aliases
+		var profiles = cnx.select(Profile, Fields(twitter, first = person.firstName, last = person.surname, person.id));
+		Assert.equals(2, profiles.length);
+		for (profile in profiles) {
+			checkFieldsExist(profile, ["twitter", "first", "last", "person"]);
+			checkFieldsExist(profile.person, ["id"]);
+			checkFieldsDoNotExist(profile.person, ["first", "last", "firstName", "surname"]);
+		}
+
+		// where conditions
+		var profiles = cnx.select(Profile, Fields(twitter, person.firstName), Where($person.id==2));
+		Assert.equals(1, profiles.length);
+		Assert.equals("Jason", profiles[0].person.firstName);
+		Assert.equals("jasonaoneil", profiles[0].twitter);
+
+		// order by
+		var profiles = cnx.select(Profile, Fields(twitter, firstName = person.firstName), OrderBy($person.age));
+		checkOrder("Anna,Jason", profiles);
+		var profiles = cnx.select(Profile, Fields(twitter, firstName = person.firstName), OrderBy(-$person.age));
+		checkOrder("Jason,Anna", profiles);
+	}
+
+	function testHasOneJoins() {
+		// test fields
+		var people = cnx.select(Person, Fields(firstName, surname, profile.facebook, profile.twitter));
+		Assert.equals(3, people.length);
+		for (person in people) {
+			checkFieldsExist(person, ["firstName", "surname", "profile"]);
+			checkFieldsExist(person.profile, ["facebook", "twitter"]);
+		}
+
+		// test overlapping fields
+		var people = cnx.select(Person, Fields(id, firstName, profile.id), OrderBy($id));
+		Assert.equals(3, people.length);
+		Assert.equals("Anna", people[0].firstName);
+		Assert.equals(1, people[0].id);
+		Assert.equals(2, people[0].profile.id);
+		Assert.equals("Jason", people[1].firstName);
+		Assert.equals(2, people[1].id);
+		Assert.equals(1, people[1].profile.id);
+		Assert.equals("Theo", people[2].firstName);
+		Assert.equals(3, people[2].id);
+		Assert.equals(null, people[2].profile.id);
+
+		// test field aliases
+		var people = cnx.select(Person, Fields(id, firstName, twitter = profile.twitter, profile.id));
+		Assert.equals(2, people.length);
+		for (person in people) {
+			checkFieldsExist(person, ["id", "firstName", "twitter", "profile"]);
+			checkFieldsExist(person.profile, ["id"]);
+			checkFieldsDoNotExist(person.profile, ["twitter","facebook","github"]);
+		}
+
+		// where conditions
+		var people = cnx.select(Person, Fields(firstName), Where($profile.id!=null), OrderBy($firstName));
+		Assert.equals(2, people.length);
+		Assert.equals("Anna", people[0].firstName);
+		Assert.equals("Jason", people[1].firstName);
+
+		var people = cnx.select(Person, Fields(firstName), Where($profile.twitter!=null && $age<26));
+		Assert.equals(1, people.length);
+		Assert.equals("Anna", people[0].firstName);
+
+		// order by
+		var people = cnx.select(Person, Fields(firstName, profile.id), OrderBy($profile.twitter));
+		checkOrder("Anna,Jason,Theo", people);
+		var people = cnx.select(Person, Fields(firstName, profile.id), OrderBy(-$profile.twitter));
+		checkOrder("Theo,Jason,Anna", people);
 	}
 }
