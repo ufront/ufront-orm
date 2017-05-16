@@ -1,6 +1,6 @@
 package ufront.db.migrations;
 
-import ufront.db.migrations.Migration;
+import ufront.db.migrations.DBSchema;
 import sys.db.Connection;
 import sys.db.TableCreate;
 import sys.db.Types;

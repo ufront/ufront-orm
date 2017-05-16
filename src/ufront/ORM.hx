@@ -61,12 +61,12 @@ class ORM {}
 @:noDoc @:noUsing typedef ValidationErrors = ufront.db.ValidationErrors;
 
 // `ufront.db.migrations` package.
-@:noDoc @:noUsing typedef DBColumn = ufront.db.migrations.Migration.DBColumn;
-@:noDoc @:noUsing typedef DBIndex = ufront.db.migrations.Migration.DBIndex;
-@:noDoc @:noUsing typedef DBReferentialAction = ufront.db.migrations.Migration.DBReferentialAction;
-@:noDoc @:noUsing typedef DBForeignKey = ufront.db.migrations.Migration.DBForeignKey;
-@:noDoc @:noUsing typedef DBTable = ufront.db.migrations.Migration.DBTable;
-@:noDoc @:noUsing typedef DBSchema = ufront.db.migrations.Migration.DBSchema;
+@:noDoc @:noUsing typedef DBColumn = ufront.db.migrations.DBSchema.DBColumn;
+@:noDoc @:noUsing typedef DBIndex = ufront.db.migrations.DBSchema.DBIndex;
+@:noDoc @:noUsing typedef DBReferentialAction = ufront.db.migrations.DBSchema.DBReferentialAction;
+@:noDoc @:noUsing typedef DBForeignKey = ufront.db.migrations.DBSchema.DBForeignKey;
+@:noDoc @:noUsing typedef DBTable = ufront.db.migrations.DBSchema.DBTable;
+@:noDoc @:noUsing typedef DBSchema = ufront.db.migrations.DBSchema.DBSchema;
 @:noDoc @:noUsing typedef MigrationAction = ufront.db.migrations.Migration.MigrationAction;
 @:noDoc @:noUsing typedef MigrationDirection = ufront.db.migrations.Migration.MigrationDirection;
 @:noDoc @:noUsing typedef Migration = ufront.db.migrations.Migration;
