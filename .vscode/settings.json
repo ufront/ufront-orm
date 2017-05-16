@@ -1,0 +1,6 @@
+{
+    "haxe.displayConfigurations": [
+        ["testNeko.hxml"],
+        ["test.hxml"]
+    ]
+}

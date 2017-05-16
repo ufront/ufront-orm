@@ -1,0 +1,23 @@
+## Generic for all targets
+
+-main TestAll
+
+# Things needed for ufront-orm
+
+-lib tink_core
+-lib tink_macro
+-cp src
+
+# Things need for tests
+-lib compiletime
+-lib utest
+-lib ufront-mvc
+-lib record-macros
+-cp test
+
+## Neko
+
+-D server
+-neko build/neko_test.n
+-xml doc/neko.xml
+
