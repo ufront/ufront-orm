@@ -1,11 +1,10 @@
 package ufront.db.migrations;
 
 import ufront.db.migrations.Migration;
-import ufront.MVC;
-import minject.Injector;
+import ufront.db.migrations.DBSchema;
 #if sys
 	import sys.db.Manager;
-	import sys.db.Connection;
+	import sys.db.TableCreate;
 #end
 using tink.CoreApi;
 using Lambda;
@@ -14,9 +13,21 @@ This API provides a way of keeping the migrations in your database in sync with 
 
 A separate `MigrationCreationApi` is used to create Migration classes based on the differences between your models and your existing schema.
 **/
-class MigrationApi extends UFApi {
+class MigrationApi {
 
-	@inject public var injector:Injector;
+	var migrationManager:MigrationManager;
+
+	@inject
+	public function new(migrationManager:MigrationManager) {
+		this.migrationManager = migrationManager;
+	}
+
+	/** Creates the `uf_migration` table, unless it already exists. **/
+	public function ensureMigrationsTableExists() {
+		if (!TableCreate.exists(Migration.manager)) {
+			TableCreate.create(Migration.manager);
+		}
+	}
 
 	/** Read the `uf_migration` table to and get an array of all migrations that have been run up. **/
 	public function getMigrationsFromDB():Array<Migration> {
@@ -111,13 +122,6 @@ class MigrationApi extends UFApi {
 	Run a set of migrations against the database.
 	**/
 	public function applyMigrations( migrations:Array<Migration>, direction:MigrationDirection ):Void {
-		if ( !injector.hasMapping(MigrationManager) )
-			injector.map( MigrationManager ).asSingleton();
-		if ( !injector.hasMapping(MigrationConnection) )
-			injector.map( MigrationConnection ).asSingleton();
-		if ( !injector.hasMapping(Connection) )
-			injector.map( Connection ).toValue( Manager.cnx );
-		var migrationManager:MigrationManager = injector.getValue( MigrationManager );
 		for ( migration in migrations ) {
 			var migration = migrationManager.runMigration( migration, direction ).sure();
 			switch direction {

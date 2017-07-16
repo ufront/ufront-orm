@@ -2,25 +2,18 @@ package ufront.db.migrations;
 
 import haxe.macro.Expr;
 import haxe.macro.Context;
-// import haxe.macro.Type;
-// import ufront.db.migrations.Migration;
-// import haxe.Serializer;
-// import sys.io.File;
-
-// TODO:
-// Re-style this is a compile-time command:
-// haxe server.hxml --no-output --macro ufront.db.migrations.MigrationMacros.createMigration( "add_user_table" );
-// ufront --create-migration server.hxml add_user_table
+import haxe.macro.Type;
+import haxe.Serializer;
+import sys.io.File;
+import ufront.db.migrations.DBSchema;
 
 /**
-// On each of your files that might contain models:
---macro ufront.db.migrations.MigrationMacros.exportSchemaToFile( "server.schema" );
---macro ufront.db.migrations.MigrationMacros.exportSchemaToFile( "client.schema" );
---macro ufront.db.migrations.MigrationMacros.exportSchemaToFile( "tasks.schema" );
-
-// Then, on your task runner (or whatever you use to do your migrations):
---macro ufront.db.migrations.MigrationCreator.exportSchemaToFile( "tasks.schema" );
+The plan.
+- Add an onGenerate call that gets the DBSchema based on all types that are sys.db.Object
+- Add an onGenerate call that gets the DBSchema based on all types that are ufront.db.migrations.Migration
+- Diff them to find out what needs to change, and generate (and save!) a MyNewMigrations.hx file as a result.
 **/
+
 class MigrationMacros {
 
 	/**
@@ -33,27 +26,52 @@ class MigrationMacros {
 		return null;
 	}
 
-	// /**
-	// Find every model used in this build and export the resulting schema to a file.
-	// **/
-	// public static function exportSchemaToFile( filename:String ):Void {
-	// 	Context.onGenerate(function(types) {
-	// 		var schema:DBSchema = [];
-	// 		for ( t in types ) {
-	// 			var dbTable = getDBTableFromType( t );
-	// 			if ( dbTable!=null ) {
-	// 				schema.push( dbTable );
-	// 			}
-	// 		}
-	// 		// TODO: figure out if we need to include ManyToMany join tables in our schema. And if we do, how?
-	// 		var serializedSchema = Serializer.run( schema );
-	// 		File.saveContent( filename, serializedSchema );
-	// 	});
-	// }
-	//
-	// // public static function
-	//
-	// static function getDBTableFromType( t:Type ):DBTable {
-	// 	return throw "TODO: implement";
-	// }
+	public static function exportSchema() {
+
+		Context.onGenerate(function(types) {
+			var migrationSchema:DBSchema = [];
+			var modelSchema:DBSchema = [];
+
+			var modelClassType = getClassTypeFromType(Context.getType( "sys.db.Object" ));
+			var migrationClassType = getClassTypeFromType(Context.getType( "ufront.db.migration.Migration" ));
+			for ( t in types ) {
+				var ct = getClassTypeFromType(t);
+				if ( isSubclassOf(ct,modelClassType) ) {
+					var dbTable = getDBTableFromMigrationType( t );
+					modelSchema.push( dbTable );
+				}
+				else if ( isSubclassOf(ct,migrationClassType) ) {
+					var dbTable = getDBTableFromModelType( t );
+					migrationSchema.push( dbTable );
+				}
+			}
+		});
+
+	}
+
+	static function getClassTypeFromType(t:Type):Ref<ClassType> {
+		return switch t {
+			case TInst(ctRef, _): ctRef;
+			case _: throw 'Type was not a class: $t';
+		};
+	}
+
+	static function isSubclassOf( ctRef:Ref<ClassType>, parentClass:Ref<ClassType> ) {
+		var ct = ctRef.get();
+		if (ct.superClass!=null) {
+			if (ct.superClass.t.toString()==parentClass.toString()) {
+				return true;
+			}
+			return isSubclassOf(ct.superClass.t, parentClass);
+		}
+		return false;
+	}
+
+	static function getDBTableFromModelType( t:Type ):DBTable {
+		return throw "TODO: implement";
+	}
+
+	static function getDBTableFromMigrationType( t:Type ):DBTable {
+		return throw "TODO: implement";
+	}
 }

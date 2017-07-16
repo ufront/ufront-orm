@@ -61,6 +61,7 @@ class ORM {}
 @:noDoc @:noUsing typedef ValidationErrors = ufront.db.ValidationErrors;
 
 // `ufront.db.migrations` package.
+#if server
 @:noDoc @:noUsing typedef DBColumn = ufront.db.migrations.DBSchema.DBColumn;
 @:noDoc @:noUsing typedef DBIndex = ufront.db.migrations.DBSchema.DBIndex;
 @:noDoc @:noUsing typedef DBReferentialAction = ufront.db.migrations.DBSchema.DBReferentialAction;
@@ -74,5 +75,6 @@ class ORM {}
 @:noDoc @:noUsing typedef MigrationApi = ufront.db.migrations.MigrationApi;
 @:noDoc @:noUsing typedef MigrationConnection = ufront.db.migrations.MigrationConnection;
 @:noDoc @:noUsing typedef MigrationManager = ufront.db.migrations.MigrationManager;
+#end
 #end
 // @:noDoc @:noUsing typedef MigrationMacros = ufront.db.migrations.MigrationMacros;
